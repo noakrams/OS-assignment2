@@ -7,6 +7,7 @@ struct proc;
 struct spinlock;
 struct sleeplock;
 struct stat;
+struct sigaction;
 struct superblock;
 
 // bio.c
@@ -105,6 +106,8 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+uint            sigprocmask(uint sigmask);
+int             sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -171,6 +174,7 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+void            sigret (void);
 
 // plic.c
 void            plicinit(void);

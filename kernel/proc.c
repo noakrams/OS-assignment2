@@ -120,6 +120,10 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // set default handler for all the signals
+  for(int i = 0; i<32 ; i++)
+    p->signalHandlers[0] = SIG_DFL;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -288,6 +292,9 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->signalMask = p->signalMask; //inherit signal mask from parent
+  for (int i = 0; i<32; i++) //inherit signal handlers from parent
+    np->signalHandlers[i] = p->signalHandlers[i]; 
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -653,4 +660,48 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+uint
+sigprocmask(uint sigmask){
+
+  struct proc* p = myproc ();
+  uint oldMask = p->signalMask;
+  p->signalMask = sigmask;
+  return oldMask;
+}
+
+int
+sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
+  struct proc* p = myproc ();
+  uint tmp = p->signalMask;
+  void* tmp2 = p->signalHandlers[signum];
+  if (oldact){
+    if (copyout(p->pagetable, (uint64) oldact, (char*)&p->signalHandlers[signum], sizeof(void*))< 0 ||
+      copyout(p->pagetable, (uint64) oldact+4, (char*)&p->signalMask, sizeof(void*))< 0)
+      return -1;
+
+  }
+  if (act){
+
+    if(p->signalHandlers[signum] == (void*)SIGSTOP || p->signalHandlers[signum] == (void*)SIGKILL)
+      return -1;
+    
+    if(copyin(p->pagetable,(char*) &p->signalHandlers[signum], (uint64)act, 1)<0 ||
+      copyin(p->pagetable,(char*) &p->signalMask, (uint64)act+4, 1)<0)
+      return -1;
+
+    if(p->signalMask <0){
+      p->signalMask = tmp;
+      p->signalHandlers[signum] = tmp2;
+      return -1;
+
+    }
+  }
+  return 0;
+}
+
+void
+sigret (void){
+  
 }
