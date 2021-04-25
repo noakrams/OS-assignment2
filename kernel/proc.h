@@ -113,11 +113,15 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  /* Infrastructor for signals */
+  /* Infrastructor for signals -- ass2*/
   uint pendingSignals;
   uint signalMask;
   void* signalHandlers [32];
   struct trapframe *UserTrapFrameBackup;
+  int stopped;                  // 1 if stopped, otherwise 0
+  struct sigaction *sigact;
+  uint signal_mask_backup;
+  int ignore_signals;
 };
 
 struct sigaction {

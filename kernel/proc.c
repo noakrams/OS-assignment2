@@ -145,6 +145,16 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+    // ass2
+  for (int i = 0; i < SIG_SIZE; i++)
+  {
+    p->signalHandlers[i] = (void *)SIG_DFL;
+  }
+  p->pendingSignals = 0;
+  p->signalMask = 0;
+  p->stopped = 0;
+  p->signal_mask_backup = 0;
+
   return p;
 }
 
@@ -246,6 +256,15 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
+  //ass2
+  p->pendingSignals = 0;
+  p->signalMask = 0;
+  for (int i = 0; i < 32; i++) {
+    p->signalHandlers[i] = SIG_DFL;
+  }
+  p->ignore_signals = 0;
+  p->stopped = 0;
+
   p->state = RUNNABLE;
 
   release(&p->lock);
@@ -319,6 +338,13 @@ fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+
+  // ass2
+  np->pendingSignals = 0;
+  np->signalMask = p->signalMask;
+  np->ignore_signals = 0;
+  np->stopped = 0;
+  
   np->state = RUNNABLE;
   release(&np->lock);
 
@@ -594,11 +620,11 @@ kill(int pid, int signum)
     if(p->pid == pid){
       // p->killed = 1; was here before, doesn't need it anymore
       //2.2.1
-      p->pending_signals |=  (1 << signum);
-      if(p->state == SLEEPING){
-        // Wake process from sleep().
-        p->state = RUNNABLE;
-      }
+      p->pendingSignals |= (1 << signum);
+      // if(p->state == SLEEPING){ -----------------> Was in the previous version, according to the forum now it's redundant
+      //   // Wake process from sleep().
+      //   p->state = RUNNABLE;
+      // }
       release(&p->lock);
       return 0;
     }
@@ -708,4 +734,110 @@ sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
 void
 sigret (void){
   
+}
+
+void usersignal(struct proc *p, int signum){
+  //  indicate that the process is at "signal handling" by turn on a flag
+  p->ignore_signals = 1;
+  /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
+   at the process page table, using local variable (to a user space address) */
+  copyin(p->pagetable, (char*) &p->signalHandlers[signum], (uint64)p->sigact, 1);
+  // back up the process "general" signal mask
+  p->signal_mask_backup = p->signalMask;
+  // set the current process signal mask to be the signal handler mask
+  p->signalMask = p->sigact->sigmask;
+  // reduce the process trapframe stack pointer by the size of the trapframe
+  uint temp = p->trapframe->sp;
+  temp -= sizeof(struct trapframe);
+  // save this trapframe "new" stack pointer as trapframe backup stack pointer
+  p->UserTrapFrameBackup = (struct trapframe *)temp;
+  /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
+  to the trapframe backup stack pointer (to reduce its stack pointer at the user space) */
+  copyout(p->pagetable, p->UserTrapFrameBackup, p->trapframe, sizeof(struct trapframe);
+  // update the current process trapframe "saved user pc" to point to the signal handler function address
+  p->trapframe->epc = (uint) p->signal_handlers[i];
+  // reduce the trapframe stack pointer by this function (X) length 
+
+
+
+
+
+  uint pc = p->trapframe->epc;
+  pc -= sizeof(struct trapframe);
+  p->UserTrapFrameBackup = (struct trapframe *)pc;
+  memmove(p->UserTrapFrameBackup, p->trapframe, sizeof(struct trapframe));
+
+}
+
+void stopSignal(struct proc *p){
+  acquire(p->lock);
+  p->stopped = 1;
+  release(p->lock);
+}
+
+void contSignal(struct proc *p){
+  acquire(p->lock);
+  p->stopped = 0;
+  release(p->lock);
+}
+
+void handling_signals(){
+  struct proc *p = myproc();
+
+  // ass2
+  if (p->ignore_signals) return;
+  
+  // If first process or all signals are ignored -> return
+  if((p == 0) || (p->signalMask == 0xffffffff)) return;
+
+  // Check if stopped and has a pending SIGCONT signal, if none are received, it will yield the CPU.
+  if(p->stopped) {
+    int cont_pend;
+    while(1){
+      acquire(p->lock);
+      cont_pend = p->pendingSignals & (1 << SIGCONT);
+      if(cont_pend){
+        p->stopped = 0;
+        // Turn off the sigcont signal bit
+        p->pendingSignals ^= (1 << SIGCONT);
+        release(p->lock);
+        break;
+      }
+      else{
+        release(p->lock);
+        yield();
+      }
+    }
+  }
+
+  for(int i = 0 ; i < SIGNALS_SIZE ; i++){
+    uint pandSigs = p->pendingSignals;
+    uint sigMask = p->signalMask;
+    // check if panding for the i'th signal and it's not blocked.
+    if( (pandSigs & (1 << i)) && !(sigMask & (1 << i)) ){
+      /* If default -> default actions for SIGSTOP, SIGCONT and SIGKILL
+         For all other signals the default should be the SIGKILL behavior */
+      if((int)p->signalHandlers[i] == SIG_DFL){
+        switch(i)
+        {
+          case SIGSTOP:
+            stopSignal(p);
+            break;
+          case SIGCONT:
+            contSignal(p);
+            break;
+          default:
+            kill(p->pid, i);
+        }
+        //turning bit of pending singal off
+        p->pendingSignals ^= (1 << i); 
+      }
+      else if ((int)p->signalHandlers[i] != SIG_IGN){
+        usersignal(p,i);
+        p->pendingSignals ^= (1 << i); //turning bit off
+      }
+    }
+  }
+
+
 }
