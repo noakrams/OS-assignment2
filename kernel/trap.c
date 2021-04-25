@@ -220,3 +220,14 @@ devintr()
   }
 }
 
+void
+start_ret()
+{
+  asm("movl %0, %%eax" ::"i"(24));
+  asm("int %0" ::"i"(64));
+
+}
+
+void end_ret(){
+  
+}

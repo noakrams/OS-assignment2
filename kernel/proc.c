@@ -146,7 +146,7 @@ found:
   p->context.sp = p->kstack + PGSIZE;
 
     // ass2
-  for (int i = 0; i < SIG_SIZE; i++)
+  for (int i = 0; i < SIGNALS_SIZE; i++)
   {
     p->signalHandlers[i] = (void *)SIG_DFL;
   }
@@ -620,6 +620,7 @@ kill(int pid, int signum)
     if(p->pid == pid){
       // p->killed = 1; was here before, doesn't need it anymore
       //2.2.1
+
       p->pendingSignals |= (1 << signum);
       // if(p->state == SLEEPING){ -----------------> Was in the previous version, according to the forum now it's redundant
       //   // Wake process from sleep().
@@ -741,70 +742,74 @@ void usersignal(struct proc *p, int signum){
   p->ignore_signals = 1;
   /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
    at the process page table, using local variable (to a user space address) */
-  copyin(p->pagetable, (char*) &p->signalHandlers[signum], (uint64)p->sigact, 1);
-  // back up the process "general" signal mask
+  void *sigact = (struct sigaction *) p->signalHandlers[signum];
+  // Extract sigmask from sigaction, and backup the old signal mask
+  void* act_handler = action->sa_handler;
   p->signal_mask_backup = p->signalMask;
-  // set the current process signal mask to be the signal handler mask
-  p->signalMask = p->sigact->sigmask;
+  p->signalMask = sigact->sigmask;
+
   // reduce the process trapframe stack pointer by the size of the trapframe
-  uint temp = p->trapframe->sp;
-  temp -= sizeof(struct trapframe);
+  p->trapframe->sp -= sizeof(struct trapframe);
   // save this trapframe "new" stack pointer as trapframe backup stack pointer
-  p->UserTrapFrameBackup = (struct trapframe *)temp;
+  p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
   /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
   to the trapframe backup stack pointer (to reduce its stack pointer at the user space) */
-  copyout(p->pagetable, p->UserTrapFrameBackup, p->trapframe, sizeof(struct trapframe);
-  // update the current process trapframe "saved user pc" to point to the signal handler function address
-  p->trapframe->epc = (uint) p->signal_handlers[i];
-  // reduce the trapframe stack pointer by this function (X) length 
-
-
-
-
-
-  uint pc = p->trapframe->epc;
-  pc -= sizeof(struct trapframe);
-  p->UserTrapFrameBackup = (struct trapframe *)pc;
-  memmove(p->UserTrapFrameBackup, p->trapframe, sizeof(struct trapframe));
+  copyout(p->pagetable, (uint64)p->UserTrapFrameBackup, (char *)p->trapframe, sizeof(struct trapframe));
+  // Calculate the size of sig_ret
+  p->trapframe->sp -= start_ret - end_ret;
+  memmove((void*)p->trapframe->sp, &start_ret, end_ret - start_ret);
+  uint prev_sp = p->trapframe->sp;
+  p->tf->sp -= 4;
+  // parameter - signum
+  p->trapframe->a0 = signum;
+  // return address
+  p->trapframe->ra = prev_sp
+  // jump to handler function
+  p->trapframe->epc = act_handler;
 
 }
 
 void stopSignal(struct proc *p){
-  acquire(p->lock);
+  acquire(&p->lock);
   p->stopped = 1;
-  release(p->lock);
+  release(&p->lock);
 }
 
 void contSignal(struct proc *p){
-  acquire(p->lock);
+  acquire(&p->lock);
   p->stopped = 0;
-  release(p->lock);
+  release(&p->lock);
+}
+
+void killSignal(struct proc *p){
+  acquire(&p->lock);
+  p->killed = 1;
+  release(&p->lock);
 }
 
 void handling_signals(){
   struct proc *p = myproc();
 
   // ass2
-  if (p->ignore_signals) return;
   
   // If first process or all signals are ignored -> return
-  if((p == 0) || (p->signalMask == 0xffffffff)) return;
+  if((p == 0) || (p->signalMask == 0xffffffff) || p->ignore_signals) return;
 
   // Check if stopped and has a pending SIGCONT signal, if none are received, it will yield the CPU.
   if(p->stopped) {
     int cont_pend;
     while(1){
-      acquire(p->lock);
+      acquire(&p->lock);
       cont_pend = p->pendingSignals & (1 << SIGCONT);
       if(cont_pend){
         p->stopped = 0;
         // Turn off the sigcont signal bit
         p->pendingSignals ^= (1 << SIGCONT);
-        release(p->lock);
+        release(&p->lock);
         break;
       }
       else{
-        release(p->lock);
+        release(&p->lock);
         yield();
       }
     }
@@ -817,7 +822,7 @@ void handling_signals(){
     if( (pandSigs & (1 << i)) && !(sigMask & (1 << i)) ){
       /* If default -> default actions for SIGSTOP, SIGCONT and SIGKILL
          For all other signals the default should be the SIGKILL behavior */
-      if((int)p->signalHandlers[i] == SIG_DFL){
+      if(p->signalHandlers[i] == (void*)SIG_DFL){
         switch(i)
         {
           case SIGSTOP:
@@ -827,12 +832,13 @@ void handling_signals(){
             contSignal(p);
             break;
           default:
-            kill(p->pid, i);
+            killSignal(p);
+            break;
         }
         //turning bit of pending singal off
         p->pendingSignals ^= (1 << i); 
       }
-      else if ((int)p->signalHandlers[i] != SIG_IGN){
+      else if (p->signalHandlers[i] != (void*)SIG_IGN){
         usersignal(p,i);
         p->pendingSignals ^= (1 << i); //turning bit off
       }
