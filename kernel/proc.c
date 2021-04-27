@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -16,6 +17,11 @@ int nextpid = 1;
 struct spinlock pid_lock;
 
 extern void forkret(void);
+extern void handling_signals();
+
+void start_ret();
+void end_ret();
+
 static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
@@ -25,6 +31,7 @@ extern char trampoline[]; // trampoline.S
 // memory model when using p->parent.
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
+
 
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
@@ -119,13 +126,25 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->pendingSignals = 0;
+  p->signalMask = 0;
+  p->stopped = 0;
+  p->signal_mask_backup = 0;
+  p->ignore_signals = 0;
 
   // set default handler for all the signals
   for(int i = 0; i<32 ; i++)
     p->signalHandlers[0] = SIG_DFL;
 
-  // Allocate a trapframe page.
+  //  Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // Allocate a backup trapframe page.
+  if((p->UserTrapFrameBackup = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -144,16 +163,6 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
-    // ass2
-  for (int i = 0; i < SIGNALS_SIZE; i++)
-  {
-    p->signalHandlers[i] = (void *)SIG_DFL;
-  }
-  p->pendingSignals = 0;
-  p->signalMask = 0;
-  p->stopped = 0;
-  p->signal_mask_backup = 0;
 
   return p;
 }
@@ -738,34 +747,45 @@ sigret (void){
 }
 
 void usersignal(struct proc *p, int signum){
-  //  indicate that the process is at "signal handling" by turn on a flag
-  p->ignore_signals = 1;
+  
   /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
-   at the process page table, using local variable (to a user space address) */
-  void *sigact = (struct sigaction *) p->signalHandlers[signum];
+  at the process page table, using local variable (to a user space address) */
+  struct sigaction *sigact;
+  copyin(p->pagetable, (char*)&sigact, (uint64)p->signalHandlers[signum], sizeof(uint64));
+
   // Extract sigmask from sigaction, and backup the old signal mask
-  void* act_handler = action->sa_handler;
   p->signal_mask_backup = p->signalMask;
   p->signalMask = sigact->sigmask;
 
+  // indicate that the process is at "signal handling" by turn on a flag
+  p->ignore_signals = 1;
+
   // reduce the process trapframe stack pointer by the size of the trapframe
   p->trapframe->sp -= sizeof(struct trapframe);
+
   // save this trapframe "new" stack pointer as trapframe backup stack pointer
   p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
+
   /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
   to the trapframe backup stack pointer (to reduce its stack pointer at the user space) */
   copyout(p->pagetable, (uint64)p->UserTrapFrameBackup, (char *)p->trapframe, sizeof(struct trapframe));
+
+  // Extract handler from struct action, and updated saved user pc to point to signal handler
+  void* act_handler = sigact->sa_handler;
+  p->trapframe->epc = (uint64)act_handler;
+
   // Calculate the size of sig_ret
-  p->trapframe->sp -= start_ret - end_ret;
-  memmove((void*)p->trapframe->sp, &start_ret, end_ret - start_ret);
-  uint prev_sp = p->trapframe->sp;
-  p->tf->sp -= 4;
-  // parameter - signum
+  uint sigret_size = start_ret - end_ret;
+
+  // Reduce stack pointer by size of function sigret and copy out function to user stack
+  p->trapframe->sp -= sigret_size;
+  copyout(p->pagetable, p->trapframe->sp, (char *)&start_ret, sigret_size);
+
+  // parameter = signum
   p->trapframe->a0 = signum;
-  // return address
-  p->trapframe->ra = prev_sp
-  // jump to handler function
-  p->trapframe->epc = act_handler;
+
+  // update return address so that after handler finishes it will jump to sigret  
+  p->trapframe->ra = p->trapframe->sp;
 
 }
 

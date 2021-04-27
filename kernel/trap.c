@@ -13,6 +13,7 @@ extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
+void handling_signals();
 
 extern int devintr();
 
@@ -218,16 +219,4 @@ devintr()
   } else {
     return 0;
   }
-}
-
-void
-start_ret()
-{
-  asm("movl %0, %%eax" ::"i"(24));
-  asm("int %0" ::"i"(64));
-
-}
-
-void end_ret(){
-  
 }

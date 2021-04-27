@@ -119,7 +119,6 @@ struct proc {
   void* signalHandlers [32];
   struct trapframe *UserTrapFrameBackup;
   int stopped;                  // 1 if stopped, otherwise 0
-  struct sigaction *sigact;
   uint signal_mask_backup;
   int ignore_signals;
 };
