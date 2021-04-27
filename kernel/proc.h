@@ -121,9 +121,5 @@ struct proc {
   int stopped;                  // 1 if stopped, otherwise 0
   uint signal_mask_backup;
   int ignore_signals;
-};
-
-struct sigaction {
-  void (*sa_handler) (int);
-  unsigned int sigmask;
+  uint maskHandlers [32];
 };

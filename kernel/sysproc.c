@@ -119,7 +119,7 @@ sys_sigaction(void)
 
   struct proc* p = myproc();
   void* tmp = (void*)p->trapframe->a1;
-  void* tmp2 = (void*)p->trapframe->a1;
+  void* tmp2 = (void*)p->trapframe->a2;
   if (!tmp || !tmp2)
     return -1;
   const struct sigaction * act = (const struct sigaction *) tmp;

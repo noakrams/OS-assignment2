@@ -1,13 +1,11 @@
-  
 #include "kernel/types.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
 #include "kernel/syscall.h"
+#include "kernel/sigaction.h"
 
-struct sigaction {
-  void (*sa_handler) (int);
-  unsigned int sigmask;
-};
+
+
 
 #define SIG_DFL 0 /* default signal handling */
 #define SIG_IGN 1 /* ignore signal */

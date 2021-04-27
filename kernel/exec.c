@@ -120,8 +120,10 @@ exec(char *path, char **argv)
   /* Return all custom signal handlers to the default */
   for (int i =0; i<32; i++){
     void* signalHanlder = p->signalHandlers[i]; 
-    if(signalHanlder != (void*)SIG_IGN && signalHanlder != (void*)SIG_DFL)
+    if(signalHanlder != (void*)SIG_IGN && signalHanlder != (void*)SIG_DFL){
       signalHanlder = (void*)SIG_DFL;
+      p->maskHandlers[i]= 0;
+    }
   }
   p->signalMask = 0;
 
