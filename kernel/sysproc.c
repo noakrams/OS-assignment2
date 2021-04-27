@@ -95,3 +95,41 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+/* sig proc mask*/
+uint64
+sys_sigprocmask(void)
+{
+  int mask;
+
+  if(argint(0, &mask) < 0)
+    return -1;
+  
+  return sigprocmask(mask);
+}
+
+uint64
+sys_sigaction(void)
+{
+  int signum;
+  if(argint(0, &signum) < 0)
+    return -1;
+
+  struct proc* p = myproc();
+  void* tmp = (void*)p->trapframe->a1;
+  void* tmp2 = (void*)p->trapframe->a2;
+  if (!tmp || !tmp2)
+    return -1;
+  const struct sigaction * act = (const struct sigaction *) tmp;
+  struct sigaction * oldact = (struct sigaction *) tmp2;
+
+  return sigaction (signum,act,oldact);
+}
+
+uint64
+sys_sigret(void)
+{
+  sigret();
+  return 0;
+}

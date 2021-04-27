@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "sigaction.h"
 
 struct cpu cpus[NCPU];
 
@@ -119,6 +120,12 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+
+  // set default values for signal
+  p->pendingSignals = 0;
+  p->signalMask = 0;
+  memset(p->signalHandlers, SIG_DFL, sizeof(p->signalHandlers));
+  memset(p->maskHandlers, 0, sizeof(p->maskHandlers));
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -288,6 +295,9 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->signalMask = p->signalMask; //inherit signal mask from parent
+  for (int i = 0; i<32; i++) //inherit signal handlers from parent
+    np->signalHandlers[i] = p->signalHandlers[i]; 
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -653,4 +663,70 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+uint
+sigprocmask(uint sigmask){
+
+  struct proc* p = myproc ();
+  uint oldMask = p->signalMask;
+  p->signalMask = sigmask;
+  return oldMask;
+}
+
+int
+sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
+
+  // printf ("signum is: %d\nact adress is: %d\noldact address is: %d\n", signum,act,oldact);
+
+  // Check that signum in the correct range
+
+  if (signum < 0 || signum > 32)
+    return -1;
+
+  if (signum == SIGSTOP || signum == SIGKILL)
+      return -1;
+
+
+  struct proc* p = myproc ();
+  acquire(&p->lock);
+
+  if (oldact){
+
+    struct sigaction oldSig;
+    oldSig.sa_handler = p->signalHandlers[signum];
+    oldSig.sigmask = p->maskHandlers[signum];
+
+
+    if (copyout(p->pagetable, (uint64) oldact, (char*)&oldSig.sa_handler, sizeof(8)) < 0)
+      return -1;
+
+    if (copyout(p->pagetable, (uint64) oldact+8, (char*)&oldSig.sigmask, sizeof(uint)) < 0)
+      return -1;  
+  }
+
+
+  if (act){
+
+    struct sigaction newSig;
+
+    if(copyin(p->pagetable,(char*)&newSig, (uint64)act, sizeof(struct sigaction))<0)
+      return -1;
+
+    if(newSig.sigmask <0)
+      return -1;
+
+    p->signalHandlers[signum] = newSig.sa_handler;
+    p->maskHandlers[signum] = newSig.sigmask;
+
+  }
+
+  release(&p->lock);
+
+  return 0;
+}
+
+void
+sigret (void){
+  
 }
