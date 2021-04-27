@@ -627,9 +627,9 @@ kill(int pid, int signum)
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     if(p->pid == pid){
-      // p->killed = 1; was here before, doesn't need it anymore
       //2.2.1
-
+      if(signum == SIGKILL)
+        p->killed = 1; 
       p->pendingSignals |= (1 << signum);
       // if(p->state == SLEEPING){ -----------------> Was in the previous version, according to the forum now it's redundant
       //   // Wake process from sleep().
@@ -714,6 +714,7 @@ sigprocmask(uint sigmask){
 int
 sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
   struct proc* p = myproc ();
+  if(signum == SIGSTOP || signum == SIGKILL) return -1;
   uint tmp = p->signalMask;
   void* tmp2 = p->signalHandlers[signum];
   if (oldact){
@@ -723,15 +724,18 @@ sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
 
   }
   if (act){
-
-    if(p->signalHandlers[signum] == (void*)SIGSTOP || p->signalHandlers[signum] == (void*)SIGKILL)
-      return -1;
+    printf("act exist\n");
+    // if(p->signalHandlers[signum] == (void*)SIGSTOP || p->signalHandlers[signum] == (void*)SIGKILL)
+    //   return -1;
     
     if(copyin(p->pagetable,(char*) &p->signalHandlers[signum], (uint64)act, 1)<0 ||
-      copyin(p->pagetable,(char*) &p->signalMask, (uint64)act+4, 1)<0)
+      copyin(p->pagetable,(char*) &p->signalMask, (uint64)act+4, 1)<0){
+      printf("***Didn't*** change signal handler\n");
       return -1;
+      }
 
     if(p->signalMask <0){
+      printf("not good\n");
       p->signalMask = tmp;
       p->signalHandlers[signum] = tmp2;
       return -1;
@@ -743,10 +747,15 @@ sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
 
 void
 sigret (void){
-  
+  struct proc* p = myproc();
+  printf("sig ret\n");
+  memmove(p->trapframe, p->UserTrapFrameBackup, sizeof(struct trapframe));
+  p->signalMask = p->signal_mask_backup;
+  p->ignore_signals = 0;
 }
 
 void usersignal(struct proc *p, int signum){
+  printf("here in usersignal\n");
   
   /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
   at the process page table, using local variable (to a user space address) */
@@ -763,7 +772,7 @@ void usersignal(struct proc *p, int signum){
   // reduce the process trapframe stack pointer by the size of the trapframe
   p->trapframe->sp -= sizeof(struct trapframe);
 
-  // save this trapframe "new" stack pointer as trapframe backup stack pointer
+  // save this trapframe "new" stackS pointer as trapframe backup stack pointer
   p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
 
   /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
@@ -801,11 +810,6 @@ void contSignal(struct proc *p){
   release(&p->lock);
 }
 
-void killSignal(struct proc *p){
-  acquire(&p->lock);
-  p->killed = 1;
-  release(&p->lock);
-}
 
 void handling_signals(){
   struct proc *p = myproc();
@@ -816,7 +820,7 @@ void handling_signals(){
   if((p == 0) || (p->signalMask == 0xffffffff) || p->ignore_signals) return;
 
   // Check if stopped and has a pending SIGCONT signal, if none are received, it will yield the CPU.
-  if(p->stopped) {
+  if(p->stopped && !(p->signalMask & (1 << SIGSTOP))) {
     int cont_pend;
     while(1){
       acquire(&p->lock);
@@ -835,15 +839,17 @@ void handling_signals(){
     }
   }
 
-  for(int i = 0 ; i < SIGNALS_SIZE ; i++){
+  for(int sig = 0 ; sig < SIGNALS_SIZE ; sig++){
     uint pandSigs = p->pendingSignals;
     uint sigMask = p->signalMask;
     // check if panding for the i'th signal and it's not blocked.
-    if( (pandSigs & (1 << i)) && !(sigMask & (1 << i)) ){
+    if( (pandSigs & (1 << sig)) && !(sigMask & (1 << sig)) ){
+      printf("signal %d got panding and not blocked\n", sig);
       /* If default -> default actions for SIGSTOP, SIGCONT and SIGKILL
          For all other signals the default should be the SIGKILL behavior */
-      if(p->signalHandlers[i] == (void*)SIG_DFL){
-        switch(i)
+      if(p->signalHandlers[sig] == (void*)SIG_DFL){
+        printf("sig == %d and default handler\n", sig);
+        switch(sig)
         {
           case SIGSTOP:
             stopSignal(p);
@@ -852,15 +858,16 @@ void handling_signals(){
             contSignal(p);
             break;
           default:
-            killSignal(p);
+            kill(p->pid, SIGKILL);
             break;
         }
         //turning bit of pending singal off
-        p->pendingSignals ^= (1 << i); 
+        p->pendingSignals ^= (1 << sig); 
       }
-      else if (p->signalHandlers[i] != (void*)SIG_IGN){
-        usersignal(p,i);
-        p->pendingSignals ^= (1 << i); //turning bit off
+      else if (p->signalHandlers[sig] != (void*)SIG_IGN){
+        printf("sig == %d and user handler\n", sig);
+        usersignal(p, sig);
+        p->pendingSignals ^= (1 << sig); //turning bit off
       }
     }
   }
