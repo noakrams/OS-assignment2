@@ -13,6 +13,7 @@ extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
+void handling_signals();
 
 extern int devintr();
 
@@ -118,6 +119,8 @@ usertrapret(void)
   // set S Exception Program Counter to the saved user pc.
   w_sepc(p->trapframe->epc);
 
+  handling_signals();
+
   // tell trampoline.S the user page table to switch to.
   uint64 satp = MAKE_SATP(p->pagetable);
 
@@ -217,4 +220,3 @@ devintr()
     return 0;
   }
 }
-

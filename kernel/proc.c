@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -16,6 +17,11 @@ int nextpid = 1;
 struct spinlock pid_lock;
 
 extern void forkret(void);
+extern void handling_signals();
+
+void start_ret();
+void end_ret();
+
 static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
@@ -25,6 +31,7 @@ extern char trampoline[]; // trampoline.S
 // memory model when using p->parent.
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
+
 
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
@@ -119,9 +126,25 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->pendingSignals = 0;
+  p->signalMask = 0;
+  p->stopped = 0;
+  p->signal_mask_backup = 0;
+  p->ignore_signals = 0;
 
-  // Allocate a trapframe page.
+  // set default handler for all the signals
+  for(int i = 0; i<32 ; i++)
+    p->signalHandlers[0] = SIG_DFL;
+
+  //  Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // Allocate a backup trapframe page.
+  if((p->UserTrapFrameBackup = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -242,6 +265,15 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
+  //ass2
+  p->pendingSignals = 0;
+  p->signalMask = 0;
+  for (int i = 0; i < 32; i++) {
+    p->signalHandlers[i] = SIG_DFL;
+  }
+  p->ignore_signals = 0;
+  p->stopped = 0;
+
   p->state = RUNNABLE;
 
   release(&p->lock);
@@ -288,6 +320,9 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->signalMask = p->signalMask; //inherit signal mask from parent
+  for (int i = 0; i<32; i++) //inherit signal handlers from parent
+    np->signalHandlers[i] = p->signalHandlers[i]; 
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -312,6 +347,13 @@ fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+
+  // ass2
+  np->pendingSignals = 0;
+  np->signalMask = p->signalMask;
+  np->ignore_signals = 0;
+  np->stopped = 0;
+  
   np->state = RUNNABLE;
   release(&np->lock);
 
@@ -576,18 +618,23 @@ wakeup(void *chan)
 // The victim won't exit until it tries to return
 // to user space (see usertrap() in trap.c).
 int
-kill(int pid)
+kill(int pid, int signum)
 {
   struct proc *p;
+
+  if(signum >= SIGNALS_SIZE || signum < 0) return -1;
 
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     if(p->pid == pid){
-      p->killed = 1;
-      if(p->state == SLEEPING){
-        // Wake process from sleep().
-        p->state = RUNNABLE;
-      }
+      //2.2.1
+      if(signum == SIGKILL)
+        p->killed = 1; 
+      p->pendingSignals |= (1 << (signum + 1));
+      // if(p->state == SLEEPING){ -----------------> Was in the previous version, according to the forum now it's redundant
+      //   // Wake process from sleep().
+      //   p->state = RUNNABLE;
+      // }
       release(&p->lock);
       return 0;
     }
@@ -653,4 +700,178 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+uint
+sigprocmask(uint sigmask){
+
+  struct proc* p = myproc ();
+  uint oldMask = p->signalMask;
+  p->signalMask = sigmask;
+  return oldMask;
+}
+
+int
+sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
+  struct proc* p = myproc ();
+  if(signum == SIGSTOP || signum == SIGKILL) return -1;
+  uint tmp = p->signalMask;
+  void* tmp2 = p->signalHandlers[signum];
+  if (oldact){
+    if (copyout(p->pagetable, (uint64) oldact, (char*)&p->signalHandlers[signum], sizeof(void*))< 0 ||
+      copyout(p->pagetable, (uint64) oldact+4, (char*)&p->signalMask, sizeof(void*))< 0)
+      return -1;
+
+  }
+  if (act){
+    printf("act exist\n");
+    // if(p->signalHandlers[signum] == (void*)SIGSTOP || p->signalHandlers[signum] == (void*)SIGKILL)
+    //   return -1;
+    
+    if(copyin(p->pagetable,(char*) &p->signalHandlers[signum], (uint64)act, 1)<0 ||
+      copyin(p->pagetable,(char*) &p->signalMask, (uint64)act+4, 1)<0){
+      printf("***Didn't*** change signal handler\n");
+      return -1;
+      }
+
+    if(p->signalMask <0){
+      printf("not good\n");
+      p->signalMask = tmp;
+      p->signalHandlers[signum] = tmp2;
+      return -1;
+
+    }
+  }
+  return 0;
+}
+
+void
+sigret (void){
+  struct proc* p = myproc();
+  printf("sig ret\n");
+  memmove(p->trapframe, p->UserTrapFrameBackup, sizeof(struct trapframe));
+  p->signalMask = p->signal_mask_backup;
+  p->ignore_signals = 0;
+}
+
+void usersignal(struct proc *p, int signum){
+  printf("here in usersignal\n");
+  
+  /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
+  at the process page table, using local variable (to a user space address) */
+  struct sigaction *sigact;
+  copyin(p->pagetable, (char*)&sigact, (uint64)p->signalHandlers[signum], sizeof(uint64));
+
+  // Extract sigmask from sigaction, and backup the old signal mask
+  p->signal_mask_backup = p->signalMask;
+  p->signalMask = sigact->sigmask;
+
+  // indicate that the process is at "signal handling" by turn on a flag
+  p->ignore_signals = 1;
+
+  // reduce the process trapframe stack pointer by the size of the trapframe
+  p->trapframe->sp -= sizeof(struct trapframe);
+
+  // save this trapframe "new" stackS pointer as trapframe backup stack pointer
+  p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
+
+  /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
+  to the trapframe backup stack pointer (to reduce its stack pointer at the user space) */
+  copyout(p->pagetable, (uint64)p->UserTrapFrameBackup, (char *)p->trapframe, sizeof(struct trapframe));
+
+  // Extract handler from struct action, and updated saved user pc to point to signal handler
+  void* act_handler = sigact->sa_handler;
+  p->trapframe->epc = (uint64)act_handler;
+
+  // Calculate the size of sig_ret
+  uint sigret_size = start_ret - end_ret;
+
+  // Reduce stack pointer by size of function sigret and copy out function to user stack
+  p->trapframe->sp -= sigret_size;
+  copyout(p->pagetable, p->trapframe->sp, (char *)&start_ret, sigret_size);
+
+  // parameter = signum
+  p->trapframe->a0 = signum;
+
+  // update return address so that after handler finishes it will jump to sigret  
+  p->trapframe->ra = p->trapframe->sp;
+  printf("hereeeeeeeeeeeeeeeee");
+
+}
+
+void stopSignal(struct proc *p){
+  acquire(&p->lock);
+  p->stopped = 1;
+  release(&p->lock);
+}
+
+void contSignal(struct proc *p){
+  acquire(&p->lock);
+  p->stopped = 0;
+  release(&p->lock);
+}
+
+
+void handling_signals(){
+  struct proc *p = myproc();
+
+  // ass2
+  
+  // If first process or all signals are ignored -> return
+  if((p == 0) || (p->signalMask == 0xffffffff) || p->ignore_signals) return;
+
+  // Check if stopped and has a pending SIGCONT signal, if none are received, it will yield the CPU.
+  if(p->stopped && !(p->signalMask & (1 << SIGSTOP))) {
+    int cont_pend;
+    while(1){
+      acquire(&p->lock);
+      cont_pend = p->pendingSignals & (1 << SIGCONT);
+      if(cont_pend){
+        p->stopped = 0;
+        // Turn off the sigcont signal bit
+        p->pendingSignals ^= (1 << SIGCONT);
+        release(&p->lock);
+        break;
+      }
+      else{
+        release(&p->lock);
+        yield();
+      }
+    }
+  }
+
+  for(int sig = 0 ; sig < SIGNALS_SIZE ; sig++){
+    uint pandSigs = p->pendingSignals;
+    uint sigMask = p->signalMask;
+    // check if panding for the i'th signal and it's not blocked.
+    if( (pandSigs & (1 << sig)) && !(sigMask & (1 << sig)) ){
+      printf("signal %d got panding and not blocked\n", sig);
+      /* If default -> default actions for SIGSTOP, SIGCONT and SIGKILL
+         For all other signals the default should be the SIGKILL behavior */
+      if(p->signalHandlers[sig] == (void*)SIG_DFL){
+        printf("sig == %d and default handler\n", sig);
+        switch(sig)
+        {
+          case SIGSTOP:
+            stopSignal(p);
+            break;
+          case SIGCONT:
+            contSignal(p);
+            break;
+          default:
+            kill(p->pid, SIGKILL);
+            break;
+        }
+        //turning bit of pending singal off
+        p->pendingSignals ^= (1 << sig); 
+      }
+      else if (p->signalHandlers[sig] != (void*)SIG_IGN){
+        printf("sig == %d and user handler\n", sig);
+        usersignal(p, sig);
+        p->pendingSignals ^= (1 << sig); //turning bit off
+      }
+    }
+  }
+
+
 }
