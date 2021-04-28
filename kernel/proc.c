@@ -636,7 +636,7 @@ kill(int pid, int signum)
       //2.2.1
       if(signum == SIGKILL)
         p->killed = 1; 
-      p->pendingSignals |= (1 << (signum + 1));
+      p->pendingSignals |= (1 << signum);
       // if(p->state == SLEEPING){ -----------------> Was in the previous version, according to the forum now it's redundant
       //   // Wake process from sleep().
       //   p->state = RUNNABLE;

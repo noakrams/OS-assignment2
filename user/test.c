@@ -17,7 +17,17 @@ int flag;
 
 void handle(int signum){
     flag = signum;
-    printf("signum: %d\n", signum);
+    printf("handle -> signum: %d\n", signum);
+}
+
+void handle2(int signum){
+    flag = signum;
+    printf("handle2 -> signum: %d\n", signum);
+}
+
+void handle3(int signum){
+    flag = signum;
+    printf("handle3 -> signum: %d\n", signum);
 }
 
 
@@ -59,7 +69,17 @@ void test_custom_signal(void){
   act->sa_handler = handle;
   act->sigmask = 0;
 
+  struct sigaction* act2 = malloc(sizeof(struct sigaction *));
+  act2->sa_handler = handle2;
+  act2->sigmask = 0;
+
+  struct sigaction* act3 = malloc(sizeof(struct sigaction *));
+  act3->sa_handler = handle3;
+  act3->sigmask = 0;
+
   sigaction(5, act, 0);
+  sigaction(2, act, 0);
+  sigaction(7, act, 0);
 
   int cpid = fork();
   if(cpid == 0){
@@ -70,11 +90,12 @@ void test_custom_signal(void){
     }
   }
   else{
+    int sigNum = 7;
     sleep(10);
-    printf( "sending signal\n");
-    kill(cpid, 5);
+    printf( "sending signal %d\n" , sigNum);
+    kill(cpid, sigNum);
     sleep(10);
-    kill(cpid, SIGKILL);
+    //kill(cpid, SIGKILL);
   }
   wait(0);
   printf("custom sig test OK\n");
