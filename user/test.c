@@ -78,14 +78,17 @@ void test_custom_signal(void){
   act3->sigmask = 0;
 
   sigaction(5, act, 0);
-  sigaction(2, act, 0);
-  sigaction(7, act, 0);
+  sigaction(2, act2, 0);
+  int ret3 = sigaction(7, act3, 0);
+  printf("ret3 = %d\n", ret3);
+   printf("The address of the function handle3 is =%p\n",handle3);
 
   int cpid = fork();
   if(cpid == 0){
     while(1){
-      if(flag == 5){
+      if(flag == 7){
         printf("successfully recieved signal\n");
+        exit(0);
       }
     }
   }

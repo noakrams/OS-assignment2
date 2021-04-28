@@ -79,7 +79,7 @@ sys_kill(void)
   int pid;
   int signum;
 
-  if(argint(0, &pid) < 0 || argint(0, &signum) < 0)
+  if(argint(0, &pid) < 0 || argint(1, &signum) < 0)
     return -1;
   return kill(pid, signum);
 }
@@ -110,22 +110,38 @@ sys_sigprocmask(void)
   return sigprocmask(mask);
 }
 
+// uint64
+// sys_sigaction(void)
+// {
+//   int signum;
+//   if(argint(0, &signum) < 0)
+//     return -1;
+
+//   struct proc* p = myproc();
+//   void* tmp = (void*)p->trapframe->a0;
+//   void* tmp2 = (void*)p->trapframe->a1;
+//   if (!tmp || !tmp2)
+//     return -1;
+//   const struct sigaction * act = (const struct sigaction *) tmp;
+//   struct sigaction * oldact = (struct sigaction *) tmp2;
+
+//   return sigaction (signum,act,oldact);
+// }
+
 uint64
 sys_sigaction(void)
 {
   int signum;
+  uint64 act;
+  uint64 oldact;
   if(argint(0, &signum) < 0)
     return -1;
-
-  struct proc* p = myproc();
-  void* tmp = (void*)p->trapframe->a1;
-  void* tmp2 = (void*)p->trapframe->a2;
-  if (!tmp || !tmp2)
+  if(argaddr(1, &act) < 0)
     return -1;
-  const struct sigaction * act = (const struct sigaction *) tmp;
-  struct sigaction * oldact = (struct sigaction *) tmp2;
+  if(argaddr(2, &oldact) < 0)
+    return -1;
 
-  return sigaction (signum,act,oldact);
+  return sigaction (signum,(struct sigaction*)act,(struct sigaction*)oldact);
 }
 
 uint64

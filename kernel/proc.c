@@ -135,7 +135,7 @@ found:
 
   // set default handler for all the signals
   for(int i = 0; i<32 ; i++)
-    p->signalHandlers[0] = SIG_DFL;
+    p->signalHandlers[i] = SIG_DFL;
 
 
   // set default values for signal
@@ -723,7 +723,7 @@ sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
   // printf ("signum is: %d\nact adress is: %d\noldact address is: %d\n", signum,act,oldact);
   // Check that signum in the correct range
 
-  if (signum < 0 || signum > 32)
+  if (signum < 0 || signum >= 32)
     return -1;
 
   if (signum == SIGSTOP || signum == SIGKILL)
@@ -744,7 +744,6 @@ sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
     if (copyout(p->pagetable, (uint64) oldact+8, (char*)&oldSig.sigmask, sizeof(uint)) < 0)
       return -1;  
   }
-
   if (act){
     struct sigaction newSig;
     if(copyin(p->pagetable,(char*)&newSig, (uint64)act, sizeof(struct sigaction))<0)
@@ -754,6 +753,7 @@ sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
       return -1;
 
     p->signalHandlers[signum] = newSig.sa_handler;
+
     p->maskHandlers[signum] = newSig.sigmask;
   }
   release(&p->lock);
@@ -775,12 +775,12 @@ void usersignal(struct proc *p, int signum){
   
   /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
   at the process page table, using local variable (to a user space address) */
-  struct sigaction *sigact;
-  copyin(p->pagetable, (char*)&sigact, (uint64)p->signalHandlers[signum], sizeof(uint64));
+  // uint64 act_handler;
+  // copyin(p->pagetable, (char*)&sigact, (uint64)p->signalHandlers[signum], sizeof(uint64));
 
   // Extract sigmask from sigaction, and backup the old signal mask
   p->signal_mask_backup = p->signalMask;
-  p->signalMask = sigact->sigmask;
+  p->signalMask = p->maskHandlers[signum];
 
   // indicate that the process is at "signal handling" by turn on a flag
   p->ignore_signals = 1;
@@ -789,18 +789,21 @@ void usersignal(struct proc *p, int signum){
   p->trapframe->sp -= sizeof(struct trapframe);
 
   // save this trapframe "new" stackS pointer as trapframe backup stack pointer
-  p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
+  //p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
+
 
   /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
   to the trapframe backup stack pointer (to reduce its stack pointer at the user space) */
   copyout(p->pagetable, (uint64)p->UserTrapFrameBackup, (char *)p->trapframe, sizeof(struct trapframe));
+  //memmove(p->UserTrapFrameBackup, p->trapframe, sizeof(struct trapframe));
 
-  // Extract handler from struct action, and updated saved user pc to point to signal handler
-  void* act_handler = sigact->sa_handler;
-  p->trapframe->epc = (uint64)act_handler;
+  // Extract handler from signalHandlers, and updated saved user pc to point to signal handler
+  printf("The address of the function p->signalHandlers[signum] is =%p\n",p->signalHandlers[signum]);
+
+  p->trapframe->epc = (uint64)p->signalHandlers[signum];
 
   // Calculate the size of sig_ret
-  uint sigret_size = start_ret - end_ret;
+  uint sigret_size = end_ret - start_ret;
 
   // Reduce stack pointer by size of function sigret and copy out function to user stack
   p->trapframe->sp -= sigret_size;
@@ -811,6 +814,7 @@ void usersignal(struct proc *p, int signum){
 
   // update return address so that after handler finishes it will jump to sigret  
   p->trapframe->ra = p->trapframe->sp;
+
 
 }
 
@@ -838,7 +842,7 @@ void handling_signals(){
   // Check if stopped and has a pending SIGCONT signal, if none are received, it will yield the CPU.
   if(p->stopped && !(p->signalMask & (1 << SIGSTOP))) {
     int cont_pend;
-    while(1){
+    while(1){   
       acquire(&p->lock);
       cont_pend = p->pendingSignals & (1 << SIGCONT);
       if(cont_pend){
