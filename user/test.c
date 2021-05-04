@@ -27,7 +27,15 @@ void handle2(int signum){
 
 void handle3(int signum){
     flag = signum;
+    printf("in handle3, flag = %d\n", flag);
     printf("handle3 -> signum: %d\n", signum);
+}
+
+int wait_sig = 0;
+
+void test_handler(int signum){
+    wait_sig = 1;
+    printf("Received sigtest\n");
 }
 
 
@@ -88,17 +96,15 @@ void test_custom_signal(void){
     while(1){
       if(flag == 7){
         printf("successfully recieved signal\n");
-        exit(0);
       }
     }
   }
   else{
-    int sigNum = 7;
-    sleep(10);
-    printf( "sending signal %d\n" , sigNum);
-    kill(cpid, sigNum);
-    sleep(10);
-    //kill(cpid, SIGKILL);
+    sleep(100);
+    printf( "sending signal %d\n" , 7);
+    kill(cpid, 7);
+    sleep(100);
+    kill(cpid, SIGKILL);
   }
   wait(0);
   printf("custom sig test OK\n");
@@ -117,15 +123,15 @@ void test_stop_cont(void){
     }
   }
   else{
-    sleep(100);
+    sleep(5);
     printf("sending stop\n");
     kill(cpid, SIGSTOP);
 
-    sleep(100);
+    sleep(5);
     printf("sending cont\n");
     kill(cpid, SIGCONT);
 
-    sleep(300);
+    sleep(10);
     printf("killing\n");
     kill(cpid, SIGKILL);
   }
@@ -146,16 +152,16 @@ void test_sig_ign(void){
   if(cpid == 0){
     while(1){
       if(flag == 5){
-        printf( "successfully recieved signal\n");
+        printf( "If you see me, that's not good\n");
       }
     }
   }
   else{
-    sleep(100);
+    sleep(10);
     printf( "sending signal\n");
     kill(cpid, 5);
-    sleep(100);
-    kill(cpid, 9);
+    sleep(10);
+    kill(cpid, SIGKILL);
   }
   wait(0);
   printf("sig ign test OK\n");
@@ -168,24 +174,61 @@ void test_sigmask(void){
   uint mask = 1 << 3;
   sigprocmask(mask);
 
+  struct sigaction* act = malloc(sizeof(struct sigaction *));
+  act->sa_handler = handle;
+  act->sigmask = 0;
+
+  struct sigaction* act2 = malloc(sizeof(struct sigaction *));
+  act2->sa_handler = handle2;
+  act2->sigmask = 0;
+
+  struct sigaction* act3 = malloc(sizeof(struct sigaction *));
+  act3->sa_handler = handle3;
+  act3->sigmask = 0;
+
+  sigaction(5, act, 0);
+  sigaction(2, act2, 0);
+  sigaction(7, act3, 0);
+
   int cpid = fork();
   if(cpid == 0){
     while(1){
-      if(flag == 5){
+      if(flag == 7){
         printf("successfully recieved signal\n");
+        break;
       }
     }
   }
   else{
-    sleep(100);
+    sleep(10);
     printf("sending signal\n");
-    kill(cpid, 5);
-    sleep(100);
-    kill(cpid, 9);
+    kill(cpid, 7);
+    sleep(10);
+    printf("after handler flag = %d\n" , flag);
+    //kill(cpid, 9);
   }
   wait(0);
   printf( "sig mask test OK\n");
   flag = 0;
+}
+
+void signal_test(){
+    int pid;
+    int testsig;
+    testsig=15;
+    struct sigaction act = {test_handler, (uint)(1 << 29)};
+    struct sigaction old;
+
+    sigprocmask(0);
+    sigaction(testsig, &act, &old);
+    if((pid = fork()) == 0){
+        while(!wait_sig)
+            sleep(1);
+        exit(0);
+    }
+    kill(pid, testsig);
+    wait(&pid);
+    printf("Finished testing signals\n");
 }
 
 
@@ -197,10 +240,11 @@ main(int argc, char **argv)
   
 //  test_sigkill();
 //  test_sigkill_othersig();
-  test_custom_signal();
+//  test_custom_signal();
 //  test_stop_cont();
 //  test_sig_ign();
 //  test_sigmask();
+   signal_test();
   
   printf("ALL TESTS PASSED\n");
   exit(0);

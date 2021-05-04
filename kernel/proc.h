@@ -91,6 +91,9 @@ struct proc {
   #define SIGSTOP 17
   #define SIGCONT 19
 
+  // task 4.1
+  #define MAX_BSEM 128
+
   struct spinlock lock;
 
   // p->lock must be held when using these:
@@ -117,7 +120,7 @@ struct proc {
   uint pendingSignals;
   uint signalMask;
   void* signalHandlers [32];
-  struct trapframe *UserTrapFrameBackup;
+  struct trapframe UserTrapFrameBackup;
   int stopped;                  // 1 if stopped, otherwise 0
   uint signal_mask_backup;
   int ignore_signals;
