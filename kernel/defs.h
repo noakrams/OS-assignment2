@@ -108,6 +108,10 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 uint            sigprocmask(uint sigmask);
 int             sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+int             bsem_alloc(void);
+void            bsem_free(int i);
+void            bsem_down(int i);
+void            bsem_up(int i);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

@@ -16,6 +16,7 @@ struct proc *initproc;
 
 int nextpid = 1;
 struct spinlock pid_lock;
+struct spinlock chanel;
 
 extern void forkret(void);
 extern void handling_signals();
@@ -777,12 +778,6 @@ sigret (void){
 }
 
 void usersignal(struct proc *p, int signum){
-  printf("here in usersignal\n");
-
-  /* "copyin" function to copy (from user to kernel) the sigaction signal handler (defined at user space),
-  at the process page table, using local variable (to a user space address) */
-  // uint64 act_handler;
-  // copyin(p->pagetable, (char*)&sigact, (uint64)p->signalHandlers[signum], sizeof(uint64));
 
   // Extract sigmask from sigaction, and backup the old signal mask
   p->signal_mask_backup = p->signalMask;
@@ -791,18 +786,8 @@ void usersignal(struct proc *p, int signum){
   // indicate that the process is at "signal handling" by turn on a flag
   p->ignore_signals = 1;
 
-  // reduce the process trapframe stack pointer by the size of the trapframe
-  //p->trapframe->sp -= sizeof(struct trapframe);
-
-  // save this trapframe "new" stackS pointer as trapframe backup stack pointer
-  //p->UserTrapFrameBackup = (struct trapframe *)p->trapframe->sp;
-  // uint64 UserTrapFrameBackup = p->trapframe->sp;
-
-  /* use the "copyout" function (from kernel to user), to copy the current process trapframe, 
-  to the trapframe backup stack pointer (to reduce its stack pointer at the user space) */
-  //copyout(p->pagetable, (uint64)p->UserTrapFrameBackup, (char *)&p->trapframe, sizeof(struct trapframe));
+  // copy the current process trapframe, to the trapframe backup 
   memmove(&p->UserTrapFrameBackup, p->trapframe, sizeof(struct trapframe));
-  // copyout(p->pagetable, UserTrapFrameBackup, (char *)&p->trapframe, sizeof(struct trapframe));
 
   // Extract handler from signalHandlers, and updated saved user pc to point to signal handler
   p->trapframe->epc = (uint64)p->signalHandlers[signum];
@@ -887,7 +872,6 @@ void handling_signals(){
         p->pendingSignals ^= (1 << sig); 
       }
       else if (p->signalHandlers[sig] != (void*)SIG_IGN){
-        printf("sig == %d and user handler\n", sig);
         usersignal(p, sig);
         p->pendingSignals ^= (1 << sig); //turning bit off
       }
@@ -897,10 +881,10 @@ void handling_signals(){
 
 // First all bsems initialized to -1 represent that they are not allocated.
 
-bsems = {[0 ... MAX_BSEM-1] = -1};
+int bsems[MAX_BSEM] = {[0 ... MAX_BSEM-1] = -1};
 
-// Alloc bsem and make it a 1
-// use spinlock here
+// Alloc bsem and make it a 1.
+
 int bsem_alloc(){
   acquire(&pid_lock);
   int i = -1;
@@ -915,12 +899,31 @@ int bsem_alloc(){
   return i;
 }
 
-// Free bsem make it -1 again
+// Free bsem make it -1 again.
 
 void bsem_free(int i){
+  acquire(&pid_lock);
   bsems[i] = -1;
+  release(&pid_lock);
 }
 
-void bsem_down(int i){
+/* While so that only one thread will continue. 
+   sleep on chanel of kind spinlock, with lock pid_lock */
 
+void bsem_down(int i){
+  acquire(&pid_lock);
+  while(bsems[i] == 0){
+    sleep(&chanel, &pid_lock);
+  }
+  bsems[i] = 0;
+  release(&pid_lock);
+}
+
+// Turn bsems[i] on and wake up thread that is sleeping on chanel and waiting for bsems[i].
+
+void bsem_up(int i){
+  acquire(&pid_lock);
+  bsems[i] = 1;
+  wakeup(&chanel);
+  release(&pid_lock);
 }

@@ -231,6 +231,28 @@ void signal_test(){
     printf("Finished testing signals\n");
 }
 
+void bsem_test(){
+    int pid;
+    int bid = bsem_alloc();
+    bsem_down(bid);
+    printf("1. Parent downing semaphore, pid number = %d\n" , getpid());
+    if((pid = fork()) == 0){
+        printf("2. Child downing semaphore, pid number = %d\n" , getpid());
+        bsem_down(bid);
+        printf("4. Child woke up\n");
+        exit(0);
+    }
+    sleep(5);
+    printf("3. Let the child wait on the semaphore...\n");
+    sleep(10);
+    bsem_up(bid);
+
+    bsem_free(bid);
+    wait(&pid);
+
+    printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
+}
+
 
 //ASS2 TASK2
 int
@@ -244,7 +266,8 @@ main(int argc, char **argv)
 //  test_stop_cont();
 //  test_sig_ign();
 //  test_sigmask();
-   signal_test();
+  signal_test();
+//    bsem_test();
   
   printf("ALL TESTS PASSED\n");
   exit(0);

@@ -150,3 +150,33 @@ sys_sigret(void)
   sigret();
   return 0;
 }
+
+uint64
+sys_bsem_alloc(void)
+{
+  return bsem_alloc();
+}
+
+void
+sys_bsem_free(void)
+{
+  int i;
+  if(argint(0, &i) >= 0)
+    bsem_free(i);
+}
+
+void
+sys_bsem_down(void)
+{
+  int i;
+  if(argint(0, &i) >= 0)
+    bsem_down(i);
+}
+
+void
+sys_bsem_up(void)
+{
+  int i;
+  if(argint(0, &i) >= 0)
+    bsem_up(i);
+}
