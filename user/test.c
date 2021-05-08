@@ -1,8 +1,15 @@
+#include "kernel/sigaction.h"
+#include "user/Csemaphore.c"
+
+#include "kernel/param.h"
 #include "kernel/types.h"
+#include "kernel/stat.h"
 #include "user/user.h"
+#include "kernel/fs.h"
 #include "kernel/fcntl.h"
 #include "kernel/syscall.h"
-#include "kernel/sigaction.h"
+#include "kernel/memlayout.h"
+#include "kernel/riscv.h"
 
 
 
@@ -39,40 +46,37 @@ void test_handler(int signum){
 }
 
 
-void test_sigkill(void){
+void sigkillTest(void){
   
-  printf("test sigkill start\n");
   int cpid = fork();
   if(cpid == 0){
     while(1);
   }
   else{
-    sleep(5);
+    sleep(50);
     kill(cpid, SIGKILL);
   }
-  printf("test_sigkill OK\n");
-
+  printf("sigkillTest OK\n");
 }
 
-void test_sigkill_othersig(void){
+
+void killwdiffSignum(void){
   
-  printf("kill other sig test start\n");
   int cpid = fork();
   if(cpid == 0){
     while(1);
   }
   else{
-    sleep(100);
+    sleep(50);
     kill(cpid, 15);
   }
-  printf("kill other sig test OK\n");
+  printf("kill with another signum test OK\n");
 
 }
 
 
-void test_custom_signal(void){
-  
-  printf("custon signal test start\n");
+void testSigactionHandler1(void){
+
   struct sigaction* act = malloc(sizeof(struct sigaction *));
   act->sa_handler = handle;
   act->sigmask = 0;
@@ -111,37 +115,64 @@ void test_custom_signal(void){
   flag = 0;
 }
 
-void test_stop_cont(void){
+void testContStopCont(void){
 
-  printf("stop cont test start\n");
 
   int cpid = fork();
   if(cpid == 0){
     while(1){
-      printf("in while\n");
       sleep(10);
     }
   }
   else{
-    sleep(5);
-    printf("sending stop\n");
-    kill(cpid, SIGSTOP);
-
-    sleep(5);
+    sleep(20);
     printf("sending cont\n");
     kill(cpid, SIGCONT);
 
-    sleep(10);
+    sleep(20);
+    printf("sending stop\n");
+    kill(cpid, SIGSTOP);
+
+    sleep(20);
+    printf("sending cont\n");
+    kill(cpid, SIGCONT);
+
+    sleep(20);
     printf("killing\n");
     kill(cpid, SIGKILL);
   }
   wait(0);
-  printf("stop cont test OK\n");
+  printf("testContStopCont OK\n");
+}
+
+void testStopCont(void){
+
+
+  int cpid = fork();
+  if(cpid == 0){
+    while(1){
+      sleep(10);
+    }
+  }
+  else{
+    sleep(20);
+    printf("send stop\n");
+    kill(cpid, SIGSTOP);
+
+    sleep(20);
+    printf("send cont\n");
+    kill(cpid, SIGCONT);
+
+    sleep(20);
+    printf("now to the killing\n");
+    kill(cpid, SIGKILL);
+  }
+  wait(0);
+  printf("testStopCont OK\n");
 }
 
 
-void test_sig_ign(void){
-  printf( "sig ign test start\n");
+void testSigactionIGN(void){
   struct sigaction* act = malloc(sizeof(struct sigaction));
   act->sa_handler = (void *)SIG_IGN;
   act->sigmask = 0;
@@ -158,19 +189,18 @@ void test_sig_ign(void){
   }
   else{
     sleep(10);
-    printf( "sending signal\n");
+    printf( "send sigaction eith SIG_IGN\n");
     kill(cpid, 5);
     sleep(10);
     kill(cpid, SIGKILL);
   }
   wait(0);
-  printf("sig ign test OK\n");
+  printf("testSigactionIGN test OK\n");
   flag = 0;
 }
 
 
-void test_sigmask(void){
-  printf("sig mask test start\n");
+void testSigmAsk(void){
   uint mask = 1 << 3;
   sigprocmask(mask);
 
@@ -194,18 +224,16 @@ void test_sigmask(void){
   if(cpid == 0){
     while(1){
       if(flag == 7){
-        printf("successfully recieved signal\n");
+        printf("Recieved flag\n");
         break;
       }
     }
   }
   else{
     sleep(10);
-    printf("sending signal\n");
+    printf("sending sigaction with handler\n");
     kill(cpid, 7);
     sleep(10);
-    printf("after handler flag = %d\n" , flag);
-    //kill(cpid, 9);
   }
   wait(0);
   printf( "sig mask test OK\n");
@@ -254,21 +282,58 @@ void bsem_test(){
 }
 
 
+
+void Csem_test(){
+	struct counting_semaphore csem;
+    int retval;
+    int pid;
+    
+    
+    retval = csem_alloc(&csem,1);
+    if(retval==-1)
+    {
+		printf("failed csem alloc");
+		exit(-1);
+	}
+    csem_down(&csem);
+    printf("1. Parent downing semaphore\n");
+    if((pid = fork()) == 0){
+        printf("2. Child downing semaphore\n");
+        csem_down(&csem);
+        printf("4. Child woke up\n");
+        exit(0);
+    }
+    sleep(5);
+    printf("3. Let the child wait on the semaphore...\n");
+    sleep(10);
+    csem_up(&csem);
+
+    csem_free(&csem);
+    wait(&pid);
+
+    printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
+}
+
+
+
 //ASS2 TASK2
 int
 main(int argc, char **argv)
 {
   printf( "starting testing signals and friends\n");
   
-//  test_sigkill();
-//  test_sigkill_othersig();
-//  test_custom_signal();
-//  test_stop_cont();
-//  test_sig_ign();
-//  test_sigmask();
+//  sigkillTest();
+//  killwdiffSignum();
+//  testSigactionHandler1();
+//  testContStopCont();
+//  testStopCont();
+//  testSigactionIGN();
+//  testSigmAsk();
   signal_test();
-//    bsem_test();
-  
+  bsem_test();
+  Csem_test() ;
+
+
   printf("ALL TESTS PASSED\n");
   exit(0);
 }

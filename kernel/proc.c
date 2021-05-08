@@ -887,8 +887,7 @@ int bsems[MAX_BSEM] = {[0 ... MAX_BSEM-1] = -1};
 
 int bsem_alloc(){
   acquire(&pid_lock);
-  int i = -1;
-  for (i = 0; i < MAX_BSEM; i++) {
+  for (int i = 0; i < MAX_BSEM; i++) {
 	  if (bsems[i] == -1) {
 	  	bsems[i] = 1;
       release(&pid_lock);
@@ -896,7 +895,7 @@ int bsem_alloc(){
 	  } 
 	}
   release(&pid_lock);
-  return i;
+  return -1;
 }
 
 // Free bsem make it -1 again.
