@@ -43,3 +43,7 @@ entry("bsem_down");
 entry("bsem_up");
 entry("bsem_free");
 entry("bsem_alloc");
+entry("kthread_create");
+entry("kthread_id");
+entry("kthread_exit");
+entry("kthread_join");

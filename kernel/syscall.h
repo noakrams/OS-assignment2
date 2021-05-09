@@ -27,3 +27,7 @@
 #define SYS_bsem_free 26
 #define SYS_bsem_down 27
 #define SYS_bsem_up 28
+#define SYS_kthread_create  29
+#define SYS_kthread_id  30
+#define SYS_kthread_exit  31
+#define SYS_kthread_join  32

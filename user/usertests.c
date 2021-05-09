@@ -36,10 +36,10 @@
 //     printf("Received sigtest\n");
 // }
 
-// void test_thread(){
-//     printf("Thread is now running\n");
-//     kthread_exit(0);
-// }
+void test_thread(){
+    printf("Thread is now running\n");
+    kthread_exit(0);
+}
 
 // void signal_test(char *s){
 //     int pid;
@@ -60,17 +60,24 @@
 //     printf("Finished testing signals\n");
 // }
 
-// void thread_test(char *s){
-//     int tid;
-//     int status;
-//     void* stack = malloc(STACK_SIZE);
-//     tid = kthread_create(test_thread, stack);
-//     kthread_join(tid,&status);
+void thread_test(){
+    int tid;
+    //int status;
+    void* stack = malloc(MAX_STACK_SIZE);
+    tid = kthread_create(test_thread, stack);
+    //kthread_join(tid,&status);
 
-//     tid = kthread_id();
-//     free(stack);
-//     printf("Finished testing threads, main thread id: %d, %d\n", tid,status);
-// }
+    tid = kthread_id();
+    free(stack);
+    printf("Finished testing threads, main thread id: %d\n", tid);
+}
+
+int
+main(int argc, char *argv[]){
+    //thread_test();
+    test_thread();
+    exit(0);
+}
 
 
 // void bsem_test(char *s){
@@ -3001,3 +3008,4 @@
 //     exit(0);
 //   }
 // }
+

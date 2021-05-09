@@ -33,6 +33,8 @@ readsb(int dev, struct superblock *sb)
   struct buf *bp;
 
   bp = bread(dev, 1);
+  //printf("debug: finish bread func\n");
+
   memmove(sb, bp->data, sizeof(*sb));
   brelse(bp);
 }
@@ -40,10 +42,14 @@ readsb(int dev, struct superblock *sb)
 // Init fs
 void
 fsinit(int dev) {
+  //printf("debug: starting fsinit func\n");
   readsb(dev, &sb);
+  //printf("debug: finish readsb func\n");
   if(sb.magic != FSMAGIC)
     panic("invalid file system");
   initlog(dev, &sb);
+  //printf("debug: finishing fsinit func\n");
+
 }
 
 // Zero a block.
