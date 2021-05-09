@@ -360,8 +360,8 @@ main(int argc, char **argv)
 //  testSigactionIGN();
 //  testSigmAsk();
   signal_test();
-  bsem_test();
-  Csem_test() ;
+  // bsem_test();
+  // Csem_test();
 //  thread_kthread_id();
   thread_kthread_create();
 //thread_kthread_create_with_wait();

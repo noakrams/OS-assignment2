@@ -53,8 +53,3 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
-
-int csem_alloc(struct counting_semaphore*, int);
-void csem_free(struct counting_semaphore*);
-void csem_down(struct counting_semaphore*);
-void csem_up (struct counting_semaphore*);

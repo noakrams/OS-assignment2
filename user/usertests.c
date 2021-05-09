@@ -32,6 +32,16 @@ char buf[BUFSZ];
 
 int wait_sig = 0;
 
+void test_handler1(int signum){
+    wait_sig = 1;
+    printf("Received sigtest\n");
+}
+
+void test_handler2(int signum){
+    wait_sig = 1;
+    printf("Received sigtest\n");
+}
+
 void test_handler(int signum){
     wait_sig = 1;
     printf("Received sigtest\n");
@@ -46,17 +56,29 @@ void signal_test(char *s){
     int pid;
     int testsig;
     testsig=15;
+
+    struct sigaction act1 = {test_handler1, (uint)(1 << 29)};
+    struct sigaction act2 = {test_handler2, (uint)(1 << 29)};
+
     struct sigaction act = {test_handler, (uint)(1 << 29)};
     struct sigaction old;
-
     sigprocmask(0);
+
+    sigaction(7, &act1, &old);
+    sigaction(5, &act2, &old);
+
     sigaction(testsig, &act, &old);
+
+
     if((pid = fork()) == 0){
         while(!wait_sig)
             sleep(1);
+        printf("Got out of while\n");
         exit(0);
     }
+    printf("Father pid = %d    ,    child pid = %d\n", getpid(), pid);
     kill(pid, testsig);
+    printf("signal_test - before wait\n");
     wait(&pid);
     printf("Finished testing signals\n");
 }
@@ -2882,7 +2904,7 @@ main(int argc, char *argv[])
   } tests[] = {
 	  //ASS 2 Compilation tests:
 	  {signal_test,"signal_test"},
-	  {thread_test,"thread_test"},
+	  // {thread_test,"thread_test"},
 	  {bsem_test,"bsem_test"},
 	  {Csem_test,"Csem_test"},
 	  
