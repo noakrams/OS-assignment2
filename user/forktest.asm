@@ -24,7 +24,7 @@ print(const char *s)
   18:	85a6                	mv	a1,s1
   1a:	4505                	li	a0,1
   1c:	00000097          	auipc	ra,0x0
-  20:	4ac080e7          	jalr	1196(ra) # 4c8 <write>
+  20:	390080e7          	jalr	912(ra) # 3ac <write>
 }
   24:	60e2                	ld	ra,24(sp)
   26:	6442                	ld	s0,16(sp)
@@ -47,7 +47,7 @@ forktest(void)
 
   print("fork test\n");
   3a:	00000517          	auipc	a0,0x0
-  3e:	56e50513          	addi	a0,a0,1390 # 5a8 <kthread_join+0x10>
+  3e:	44e50513          	addi	a0,a0,1102 # 488 <kthread_join+0xc>
   42:	00000097          	auipc	ra,0x0
   46:	fbe080e7          	jalr	-66(ra) # 0 <print>
 
@@ -56,7 +56,7 @@ forktest(void)
   4c:	3e800913          	li	s2,1000
     pid = fork();
   50:	00000097          	auipc	ra,0x0
-  54:	450080e7          	jalr	1104(ra) # 4a0 <fork>
+  54:	334080e7          	jalr	820(ra) # 384 <fork>
     if(pid < 0)
   58:	02054763          	bltz	a0,86 <forktest+0x58>
       break;
@@ -71,16 +71,16 @@ forktest(void)
   if(n == N){
     print("fork claimed to work N times!\n");
   64:	00000517          	auipc	a0,0x0
-  68:	55450513          	addi	a0,a0,1364 # 5b8 <kthread_join+0x20>
+  68:	43450513          	addi	a0,a0,1076 # 498 <kthread_join+0x1c>
   6c:	00000097          	auipc	ra,0x0
   70:	f94080e7          	jalr	-108(ra) # 0 <print>
     exit(1);
   74:	4505                	li	a0,1
   76:	00000097          	auipc	ra,0x0
-  7a:	432080e7          	jalr	1074(ra) # 4a8 <exit>
+  7a:	316080e7          	jalr	790(ra) # 38c <exit>
       exit(0);
   7e:	00000097          	auipc	ra,0x0
-  82:	42a080e7          	jalr	1066(ra) # 4a8 <exit>
+  82:	30e080e7          	jalr	782(ra) # 38c <exit>
   if(n == N){
   86:	3e800793          	li	a5,1000
   8a:	fcf48de3          	beq	s1,a5,64 <forktest+0x36>
@@ -91,7 +91,7 @@ forktest(void)
     if(wait(0) < 0){
   92:	4501                	li	a0,0
   94:	00000097          	auipc	ra,0x0
-  98:	41c080e7          	jalr	1052(ra) # 4b0 <wait>
+  98:	300080e7          	jalr	768(ra) # 394 <wait>
   9c:	02054a63          	bltz	a0,d0 <forktest+0xa2>
   for(; n > 0; n--){
   a0:	34fd                	addiw	s1,s1,-1
@@ -104,7 +104,7 @@ forktest(void)
   if(wait(0) != -1){
   a4:	4501                	li	a0,0
   a6:	00000097          	auipc	ra,0x0
-  aa:	40a080e7          	jalr	1034(ra) # 4b0 <wait>
+  aa:	2ee080e7          	jalr	750(ra) # 394 <wait>
   ae:	57fd                	li	a5,-1
   b0:	02f51d63          	bne	a0,a5,ea <forktest+0xbc>
     print("wait got too many\n");
@@ -113,7 +113,7 @@ forktest(void)
 
   print("fork test OK\n");
   b4:	00000517          	auipc	a0,0x0
-  b8:	55450513          	addi	a0,a0,1364 # 608 <kthread_join+0x70>
+  b8:	43450513          	addi	a0,a0,1076 # 4e8 <kthread_join+0x6c>
   bc:	00000097          	auipc	ra,0x0
   c0:	f44080e7          	jalr	-188(ra) # 0 <print>
 }
@@ -125,22 +125,22 @@ forktest(void)
   ce:	8082                	ret
       print("wait stopped early\n");
   d0:	00000517          	auipc	a0,0x0
-  d4:	50850513          	addi	a0,a0,1288 # 5d8 <kthread_join+0x40>
+  d4:	3e850513          	addi	a0,a0,1000 # 4b8 <kthread_join+0x3c>
   d8:	00000097          	auipc	ra,0x0
   dc:	f28080e7          	jalr	-216(ra) # 0 <print>
       exit(1);
   e0:	4505                	li	a0,1
   e2:	00000097          	auipc	ra,0x0
-  e6:	3c6080e7          	jalr	966(ra) # 4a8 <exit>
+  e6:	2aa080e7          	jalr	682(ra) # 38c <exit>
     print("wait got too many\n");
   ea:	00000517          	auipc	a0,0x0
-  ee:	50650513          	addi	a0,a0,1286 # 5f0 <kthread_join+0x58>
+  ee:	3e650513          	addi	a0,a0,998 # 4d0 <kthread_join+0x54>
   f2:	00000097          	auipc	ra,0x0
   f6:	f0e080e7          	jalr	-242(ra) # 0 <print>
     exit(1);
   fa:	4505                	li	a0,1
   fc:	00000097          	auipc	ra,0x0
- 100:	3ac080e7          	jalr	940(ra) # 4a8 <exit>
+ 100:	290080e7          	jalr	656(ra) # 38c <exit>
 
 0000000000000104 <main>:
 
@@ -157,10 +157,10 @@ main(void)
   exit(0);
  114:	4501                	li	a0,0
  116:	00000097          	auipc	ra,0x0
- 11a:	392080e7          	jalr	914(ra) # 4a8 <exit>
+ 11a:	276080e7          	jalr	630(ra) # 38c <exit>
 
 000000000000011e <strcpy>:
-#include "kernel/Csemaphore.h"
+#include "user/user.h"
 
 
 char*
@@ -340,7 +340,7 @@ gets(char *buf, int max)
  202:	faf40593          	addi	a1,s0,-81
  206:	4501                	li	a0,0
  208:	00000097          	auipc	ra,0x0
- 20c:	2b8080e7          	jalr	696(ra) # 4c0 <read>
+ 20c:	19c080e7          	jalr	412(ra) # 3a4 <read>
     if(cc < 1)
  210:	00a05e63          	blez	a0,22c <gets+0x56>
     buf[i++] = c;
@@ -392,7 +392,7 @@ stat(const char *n, struct stat *st)
   fd = open(n, O_RDONLY);
  258:	4581                	li	a1,0
  25a:	00000097          	auipc	ra,0x0
- 25e:	28e080e7          	jalr	654(ra) # 4e8 <open>
+ 25e:	172080e7          	jalr	370(ra) # 3cc <open>
   if(fd < 0)
  262:	02054563          	bltz	a0,28c <stat+0x42>
  266:	84aa                	mv	s1,a0
@@ -400,12 +400,12 @@ stat(const char *n, struct stat *st)
   r = fstat(fd, st);
  268:	85ca                	mv	a1,s2
  26a:	00000097          	auipc	ra,0x0
- 26e:	296080e7          	jalr	662(ra) # 500 <fstat>
+ 26e:	17a080e7          	jalr	378(ra) # 3e4 <fstat>
  272:	892a                	mv	s2,a0
   close(fd);
  274:	8526                	mv	a0,s1
  276:	00000097          	auipc	ra,0x0
- 27a:	25a080e7          	jalr	602(ra) # 4d0 <close>
+ 27a:	13e080e7          	jalr	318(ra) # 3b4 <close>
   return r;
 }
  27e:	854a                	mv	a0,s2
@@ -580,489 +580,324 @@ memcpy(void *dst, const void *src, uint n)
  380:	0141                	addi	sp,sp,16
  382:	8082                	ret
 
-0000000000000384 <csem_down>:
-
-
-void 
-csem_down(struct counting_semaphore *sem) {
- 384:	1101                	addi	sp,sp,-32
- 386:	ec06                	sd	ra,24(sp)
- 388:	e822                	sd	s0,16(sp)
- 38a:	e426                	sd	s1,8(sp)
- 38c:	1000                	addi	s0,sp,32
- 38e:	84aa                	mv	s1,a0
-    bsem_down(sem->bsem2);
- 390:	4148                	lw	a0,4(a0)
- 392:	00000097          	auipc	ra,0x0
- 396:	1ce080e7          	jalr	462(ra) # 560 <bsem_down>
-    bsem_down(sem->bsem1);
- 39a:	4088                	lw	a0,0(s1)
- 39c:	00000097          	auipc	ra,0x0
- 3a0:	1c4080e7          	jalr	452(ra) # 560 <bsem_down>
-    sem->count -= 1;
- 3a4:	449c                	lw	a5,8(s1)
- 3a6:	37fd                	addiw	a5,a5,-1
- 3a8:	0007871b          	sext.w	a4,a5
- 3ac:	c49c                	sw	a5,8(s1)
-    if (sem->count > 0)
- 3ae:	00e04c63          	bgtz	a4,3c6 <csem_down+0x42>
-    	bsem_up(sem->bsem2);
-    bsem_up(sem->bsem1);
- 3b2:	4088                	lw	a0,0(s1)
- 3b4:	00000097          	auipc	ra,0x0
- 3b8:	1b4080e7          	jalr	436(ra) # 568 <bsem_up>
-}
- 3bc:	60e2                	ld	ra,24(sp)
- 3be:	6442                	ld	s0,16(sp)
- 3c0:	64a2                	ld	s1,8(sp)
- 3c2:	6105                	addi	sp,sp,32
- 3c4:	8082                	ret
-    	bsem_up(sem->bsem2);
- 3c6:	40c8                	lw	a0,4(s1)
- 3c8:	00000097          	auipc	ra,0x0
- 3cc:	1a0080e7          	jalr	416(ra) # 568 <bsem_up>
- 3d0:	b7cd                	j	3b2 <csem_down+0x2e>
-
-00000000000003d2 <csem_up>:
-
-
-void 
-csem_up(struct counting_semaphore *sem) {
- 3d2:	1101                	addi	sp,sp,-32
- 3d4:	ec06                	sd	ra,24(sp)
- 3d6:	e822                	sd	s0,16(sp)
- 3d8:	e426                	sd	s1,8(sp)
- 3da:	1000                	addi	s0,sp,32
- 3dc:	84aa                	mv	s1,a0
-	bsem_down(sem->bsem1);
- 3de:	4108                	lw	a0,0(a0)
- 3e0:	00000097          	auipc	ra,0x0
- 3e4:	180080e7          	jalr	384(ra) # 560 <bsem_down>
-	sem->count += 1;
- 3e8:	449c                	lw	a5,8(s1)
- 3ea:	2785                	addiw	a5,a5,1
- 3ec:	0007871b          	sext.w	a4,a5
- 3f0:	c49c                	sw	a5,8(s1)
-	if (sem->count == 1)
- 3f2:	4785                	li	a5,1
- 3f4:	00f70c63          	beq	a4,a5,40c <csem_up+0x3a>
-		bsem_up(sem->bsem2);
-	bsem_up(sem->bsem1);
- 3f8:	4088                	lw	a0,0(s1)
- 3fa:	00000097          	auipc	ra,0x0
- 3fe:	16e080e7          	jalr	366(ra) # 568 <bsem_up>
-}
- 402:	60e2                	ld	ra,24(sp)
- 404:	6442                	ld	s0,16(sp)
- 406:	64a2                	ld	s1,8(sp)
- 408:	6105                	addi	sp,sp,32
- 40a:	8082                	ret
-		bsem_up(sem->bsem2);
- 40c:	40c8                	lw	a0,4(s1)
- 40e:	00000097          	auipc	ra,0x0
- 412:	15a080e7          	jalr	346(ra) # 568 <bsem_up>
- 416:	b7cd                	j	3f8 <csem_up+0x26>
-
-0000000000000418 <csem_alloc>:
-
-
-int 
-csem_alloc(struct counting_semaphore *sem, int count) {
- 418:	7179                	addi	sp,sp,-48
- 41a:	f406                	sd	ra,40(sp)
- 41c:	f022                	sd	s0,32(sp)
- 41e:	ec26                	sd	s1,24(sp)
- 420:	e84a                	sd	s2,16(sp)
- 422:	e44e                	sd	s3,8(sp)
- 424:	1800                	addi	s0,sp,48
- 426:	892a                	mv	s2,a0
- 428:	89ae                	mv	s3,a1
-    int bsem1 = bsem_alloc();
- 42a:	00000097          	auipc	ra,0x0
- 42e:	14e080e7          	jalr	334(ra) # 578 <bsem_alloc>
- 432:	84aa                	mv	s1,a0
-    int bsem2 = bsem_alloc();
- 434:	00000097          	auipc	ra,0x0
- 438:	144080e7          	jalr	324(ra) # 578 <bsem_alloc>
-    if (bsem1 == -1 || bsem2 == -1)
- 43c:	57fd                	li	a5,-1
- 43e:	00f48d63          	beq	s1,a5,458 <csem_alloc+0x40>
- 442:	02f50863          	beq	a0,a5,472 <csem_alloc+0x5a>
-        return -1; 
-    sem->bsem1 = bsem1;
- 446:	00992023          	sw	s1,0(s2)
-    sem->bsem2 = bsem2;
- 44a:	00a92223          	sw	a0,4(s2)
-    if (count == 0)
- 44e:	00098d63          	beqz	s3,468 <csem_alloc+0x50>
-        // Binary semaphore first value = min(1, count)
-        bsem_down(sem->bsem2); 
-    sem->count = count;
- 452:	01392423          	sw	s3,8(s2)
-    return 0;
- 456:	4481                	li	s1,0
-}
- 458:	8526                	mv	a0,s1
- 45a:	70a2                	ld	ra,40(sp)
- 45c:	7402                	ld	s0,32(sp)
- 45e:	64e2                	ld	s1,24(sp)
- 460:	6942                	ld	s2,16(sp)
- 462:	69a2                	ld	s3,8(sp)
- 464:	6145                	addi	sp,sp,48
- 466:	8082                	ret
-        bsem_down(sem->bsem2); 
- 468:	00000097          	auipc	ra,0x0
- 46c:	0f8080e7          	jalr	248(ra) # 560 <bsem_down>
- 470:	b7cd                	j	452 <csem_alloc+0x3a>
-        return -1; 
- 472:	84aa                	mv	s1,a0
- 474:	b7d5                	j	458 <csem_alloc+0x40>
-
-0000000000000476 <csem_free>:
-
-
-void 
-csem_free(struct counting_semaphore *sem) {
- 476:	1101                	addi	sp,sp,-32
- 478:	ec06                	sd	ra,24(sp)
- 47a:	e822                	sd	s0,16(sp)
- 47c:	e426                	sd	s1,8(sp)
- 47e:	1000                	addi	s0,sp,32
- 480:	84aa                	mv	s1,a0
-    bsem_free(sem->bsem1);
- 482:	4108                	lw	a0,0(a0)
- 484:	00000097          	auipc	ra,0x0
- 488:	0ec080e7          	jalr	236(ra) # 570 <bsem_free>
-    bsem_free(sem->bsem2);
- 48c:	40c8                	lw	a0,4(s1)
- 48e:	00000097          	auipc	ra,0x0
- 492:	0e2080e7          	jalr	226(ra) # 570 <bsem_free>
-    //free(sem);
-}
- 496:	60e2                	ld	ra,24(sp)
- 498:	6442                	ld	s0,16(sp)
- 49a:	64a2                	ld	s1,8(sp)
- 49c:	6105                	addi	sp,sp,32
- 49e:	8082                	ret
-
-00000000000004a0 <fork>:
+0000000000000384 <fork>:
 # generated by usys.pl - do not edit
 #include "kernel/syscall.h"
 .global fork
 fork:
  li a7, SYS_fork
- 4a0:	4885                	li	a7,1
+ 384:	4885                	li	a7,1
  ecall
- 4a2:	00000073          	ecall
+ 386:	00000073          	ecall
  ret
- 4a6:	8082                	ret
+ 38a:	8082                	ret
 
-00000000000004a8 <exit>:
+000000000000038c <exit>:
 .global exit
 exit:
  li a7, SYS_exit
- 4a8:	4889                	li	a7,2
+ 38c:	4889                	li	a7,2
  ecall
- 4aa:	00000073          	ecall
+ 38e:	00000073          	ecall
  ret
- 4ae:	8082                	ret
+ 392:	8082                	ret
 
-00000000000004b0 <wait>:
+0000000000000394 <wait>:
 .global wait
 wait:
  li a7, SYS_wait
- 4b0:	488d                	li	a7,3
+ 394:	488d                	li	a7,3
  ecall
- 4b2:	00000073          	ecall
+ 396:	00000073          	ecall
  ret
- 4b6:	8082                	ret
+ 39a:	8082                	ret
 
-00000000000004b8 <pipe>:
+000000000000039c <pipe>:
 .global pipe
 pipe:
  li a7, SYS_pipe
- 4b8:	4891                	li	a7,4
+ 39c:	4891                	li	a7,4
  ecall
- 4ba:	00000073          	ecall
+ 39e:	00000073          	ecall
  ret
- 4be:	8082                	ret
+ 3a2:	8082                	ret
 
-00000000000004c0 <read>:
+00000000000003a4 <read>:
 .global read
 read:
  li a7, SYS_read
- 4c0:	4895                	li	a7,5
+ 3a4:	4895                	li	a7,5
  ecall
- 4c2:	00000073          	ecall
+ 3a6:	00000073          	ecall
  ret
- 4c6:	8082                	ret
+ 3aa:	8082                	ret
 
-00000000000004c8 <write>:
+00000000000003ac <write>:
 .global write
 write:
  li a7, SYS_write
- 4c8:	48c1                	li	a7,16
+ 3ac:	48c1                	li	a7,16
  ecall
- 4ca:	00000073          	ecall
+ 3ae:	00000073          	ecall
  ret
- 4ce:	8082                	ret
+ 3b2:	8082                	ret
 
-00000000000004d0 <close>:
+00000000000003b4 <close>:
 .global close
 close:
  li a7, SYS_close
- 4d0:	48d5                	li	a7,21
+ 3b4:	48d5                	li	a7,21
  ecall
- 4d2:	00000073          	ecall
+ 3b6:	00000073          	ecall
  ret
- 4d6:	8082                	ret
+ 3ba:	8082                	ret
 
-00000000000004d8 <kill>:
+00000000000003bc <kill>:
 .global kill
 kill:
  li a7, SYS_kill
- 4d8:	4899                	li	a7,6
+ 3bc:	4899                	li	a7,6
  ecall
- 4da:	00000073          	ecall
+ 3be:	00000073          	ecall
  ret
- 4de:	8082                	ret
+ 3c2:	8082                	ret
 
-00000000000004e0 <exec>:
+00000000000003c4 <exec>:
 .global exec
 exec:
  li a7, SYS_exec
- 4e0:	489d                	li	a7,7
+ 3c4:	489d                	li	a7,7
  ecall
- 4e2:	00000073          	ecall
+ 3c6:	00000073          	ecall
  ret
- 4e6:	8082                	ret
+ 3ca:	8082                	ret
 
-00000000000004e8 <open>:
+00000000000003cc <open>:
 .global open
 open:
  li a7, SYS_open
- 4e8:	48bd                	li	a7,15
+ 3cc:	48bd                	li	a7,15
  ecall
- 4ea:	00000073          	ecall
+ 3ce:	00000073          	ecall
  ret
- 4ee:	8082                	ret
+ 3d2:	8082                	ret
 
-00000000000004f0 <mknod>:
+00000000000003d4 <mknod>:
 .global mknod
 mknod:
  li a7, SYS_mknod
- 4f0:	48c5                	li	a7,17
+ 3d4:	48c5                	li	a7,17
  ecall
- 4f2:	00000073          	ecall
+ 3d6:	00000073          	ecall
  ret
- 4f6:	8082                	ret
+ 3da:	8082                	ret
 
-00000000000004f8 <unlink>:
+00000000000003dc <unlink>:
 .global unlink
 unlink:
  li a7, SYS_unlink
- 4f8:	48c9                	li	a7,18
+ 3dc:	48c9                	li	a7,18
  ecall
- 4fa:	00000073          	ecall
+ 3de:	00000073          	ecall
  ret
- 4fe:	8082                	ret
+ 3e2:	8082                	ret
 
-0000000000000500 <fstat>:
+00000000000003e4 <fstat>:
 .global fstat
 fstat:
  li a7, SYS_fstat
- 500:	48a1                	li	a7,8
+ 3e4:	48a1                	li	a7,8
  ecall
- 502:	00000073          	ecall
+ 3e6:	00000073          	ecall
  ret
- 506:	8082                	ret
+ 3ea:	8082                	ret
 
-0000000000000508 <link>:
+00000000000003ec <link>:
 .global link
 link:
  li a7, SYS_link
- 508:	48cd                	li	a7,19
+ 3ec:	48cd                	li	a7,19
  ecall
- 50a:	00000073          	ecall
+ 3ee:	00000073          	ecall
  ret
- 50e:	8082                	ret
+ 3f2:	8082                	ret
 
-0000000000000510 <mkdir>:
+00000000000003f4 <mkdir>:
 .global mkdir
 mkdir:
  li a7, SYS_mkdir
- 510:	48d1                	li	a7,20
+ 3f4:	48d1                	li	a7,20
  ecall
- 512:	00000073          	ecall
+ 3f6:	00000073          	ecall
  ret
- 516:	8082                	ret
+ 3fa:	8082                	ret
 
-0000000000000518 <chdir>:
+00000000000003fc <chdir>:
 .global chdir
 chdir:
  li a7, SYS_chdir
- 518:	48a5                	li	a7,9
+ 3fc:	48a5                	li	a7,9
  ecall
- 51a:	00000073          	ecall
+ 3fe:	00000073          	ecall
  ret
- 51e:	8082                	ret
+ 402:	8082                	ret
 
-0000000000000520 <dup>:
+0000000000000404 <dup>:
 .global dup
 dup:
  li a7, SYS_dup
- 520:	48a9                	li	a7,10
+ 404:	48a9                	li	a7,10
  ecall
- 522:	00000073          	ecall
+ 406:	00000073          	ecall
  ret
- 526:	8082                	ret
+ 40a:	8082                	ret
 
-0000000000000528 <getpid>:
+000000000000040c <getpid>:
 .global getpid
 getpid:
  li a7, SYS_getpid
- 528:	48ad                	li	a7,11
+ 40c:	48ad                	li	a7,11
  ecall
- 52a:	00000073          	ecall
+ 40e:	00000073          	ecall
  ret
- 52e:	8082                	ret
+ 412:	8082                	ret
 
-0000000000000530 <sbrk>:
+0000000000000414 <sbrk>:
 .global sbrk
 sbrk:
  li a7, SYS_sbrk
- 530:	48b1                	li	a7,12
+ 414:	48b1                	li	a7,12
  ecall
- 532:	00000073          	ecall
+ 416:	00000073          	ecall
  ret
- 536:	8082                	ret
+ 41a:	8082                	ret
 
-0000000000000538 <sleep>:
+000000000000041c <sleep>:
 .global sleep
 sleep:
  li a7, SYS_sleep
- 538:	48b5                	li	a7,13
+ 41c:	48b5                	li	a7,13
  ecall
- 53a:	00000073          	ecall
+ 41e:	00000073          	ecall
  ret
- 53e:	8082                	ret
+ 422:	8082                	ret
 
-0000000000000540 <uptime>:
+0000000000000424 <uptime>:
 .global uptime
 uptime:
  li a7, SYS_uptime
- 540:	48b9                	li	a7,14
+ 424:	48b9                	li	a7,14
  ecall
- 542:	00000073          	ecall
+ 426:	00000073          	ecall
  ret
- 546:	8082                	ret
+ 42a:	8082                	ret
 
-0000000000000548 <sigprocmask>:
+000000000000042c <sigprocmask>:
 .global sigprocmask
 sigprocmask:
  li a7, SYS_sigprocmask
- 548:	48d9                	li	a7,22
+ 42c:	48d9                	li	a7,22
  ecall
- 54a:	00000073          	ecall
+ 42e:	00000073          	ecall
  ret
- 54e:	8082                	ret
+ 432:	8082                	ret
 
-0000000000000550 <sigaction>:
+0000000000000434 <sigaction>:
 .global sigaction
 sigaction:
  li a7, SYS_sigaction
- 550:	48dd                	li	a7,23
+ 434:	48dd                	li	a7,23
  ecall
- 552:	00000073          	ecall
+ 436:	00000073          	ecall
  ret
- 556:	8082                	ret
+ 43a:	8082                	ret
 
-0000000000000558 <sigret>:
+000000000000043c <sigret>:
 .global sigret
 sigret:
  li a7, SYS_sigret
- 558:	48e1                	li	a7,24
+ 43c:	48e1                	li	a7,24
  ecall
- 55a:	00000073          	ecall
+ 43e:	00000073          	ecall
  ret
- 55e:	8082                	ret
+ 442:	8082                	ret
 
-0000000000000560 <bsem_down>:
+0000000000000444 <bsem_down>:
 .global bsem_down
 bsem_down:
  li a7, SYS_bsem_down
- 560:	48ed                	li	a7,27
+ 444:	48ed                	li	a7,27
  ecall
- 562:	00000073          	ecall
+ 446:	00000073          	ecall
  ret
- 566:	8082                	ret
+ 44a:	8082                	ret
 
-0000000000000568 <bsem_up>:
+000000000000044c <bsem_up>:
 .global bsem_up
 bsem_up:
  li a7, SYS_bsem_up
- 568:	48f1                	li	a7,28
+ 44c:	48f1                	li	a7,28
  ecall
- 56a:	00000073          	ecall
+ 44e:	00000073          	ecall
  ret
- 56e:	8082                	ret
+ 452:	8082                	ret
 
-0000000000000570 <bsem_free>:
+0000000000000454 <bsem_free>:
 .global bsem_free
 bsem_free:
  li a7, SYS_bsem_free
- 570:	48e9                	li	a7,26
+ 454:	48e9                	li	a7,26
  ecall
- 572:	00000073          	ecall
+ 456:	00000073          	ecall
  ret
- 576:	8082                	ret
+ 45a:	8082                	ret
 
-0000000000000578 <bsem_alloc>:
+000000000000045c <bsem_alloc>:
 .global bsem_alloc
 bsem_alloc:
  li a7, SYS_bsem_alloc
- 578:	48e5                	li	a7,25
+ 45c:	48e5                	li	a7,25
  ecall
- 57a:	00000073          	ecall
+ 45e:	00000073          	ecall
  ret
- 57e:	8082                	ret
+ 462:	8082                	ret
 
-0000000000000580 <kthread_create>:
+0000000000000464 <kthread_create>:
 .global kthread_create
 kthread_create:
  li a7, SYS_kthread_create
- 580:	48f5                	li	a7,29
+ 464:	48f5                	li	a7,29
  ecall
- 582:	00000073          	ecall
+ 466:	00000073          	ecall
  ret
- 586:	8082                	ret
+ 46a:	8082                	ret
 
-0000000000000588 <kthread_id>:
+000000000000046c <kthread_id>:
 .global kthread_id
 kthread_id:
  li a7, SYS_kthread_id
- 588:	48f9                	li	a7,30
+ 46c:	48f9                	li	a7,30
  ecall
- 58a:	00000073          	ecall
+ 46e:	00000073          	ecall
  ret
- 58e:	8082                	ret
+ 472:	8082                	ret
 
-0000000000000590 <kthread_exit>:
+0000000000000474 <kthread_exit>:
 .global kthread_exit
 kthread_exit:
  li a7, SYS_kthread_exit
- 590:	48fd                	li	a7,31
+ 474:	48fd                	li	a7,31
  ecall
- 592:	00000073          	ecall
+ 476:	00000073          	ecall
  ret
- 596:	8082                	ret
+ 47a:	8082                	ret
 
-0000000000000598 <kthread_join>:
+000000000000047c <kthread_join>:
 .global kthread_join
 kthread_join:
  li a7, SYS_kthread_join
- 598:	02000893          	li	a7,32
+ 47c:	02000893          	li	a7,32
  ecall
- 59c:	00000073          	ecall
+ 480:	00000073          	ecall
  ret
- 5a0:	8082                	ret
+ 484:	8082                	ret

@@ -9,7 +9,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
-#include "kernel/Csemaphore.h"
+#include "Csemaphore.h"
 
 
 
