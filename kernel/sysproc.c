@@ -180,3 +180,43 @@ sys_bsem_up(void)
   if(argint(0, &i) >= 0)
     bsem_up(i);
 }
+
+uint64
+sys_kthread_create(void)
+{
+  uint64 fun;
+  uint64 stack;
+  if(argaddr(0, &fun)<0)
+    return -1;
+  if(argaddr(1, &stack)<0)
+    return -1;
+  int x = kthread_create((void (*)())fun,(void *) stack);
+  printf("the value of kthread_create is: %d\n", x);
+  return x;
+}
+
+uint64
+sys_kthread_id(void)
+{
+  return kthread_id();
+}
+
+uint64
+sys_kthread_exit(void)
+{
+  int status;
+  if(argint(0, &status) < 0)
+    return -1;
+  kthread_exit(status);
+  return 0;
+}
+
+uint64
+sys_kthread_join(void)
+{
+  int tid;
+  if(argint(0, &tid) < 0)
+    return -1;
+  int * status = (int *) mythread()->trapframe->a1;
+  return kthread_join(tid,status);
+}

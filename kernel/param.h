@@ -1,4 +1,5 @@
 #define NPROC        64  // maximum number of processes
+#define NTHREAD       8  // maximum number of processes
 #define NCPU          8  // maximum number of CPUs
 #define NOFILE       16  // open files per process
 #define NFILE       100  // open files per system
@@ -12,6 +13,7 @@
 #define FSSIZE       1000  // size of file system in blocks
 #define MAXPATH      128   // maximum file path name
 #define SIGNALS_SIZE 32
+#define MAX_STACK_SIZE 4000
 
 #define SIG_DFL 0 /* default signal handling */
 #define SIG_IGN 1 /* ignore signal */

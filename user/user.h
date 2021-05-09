@@ -31,6 +31,10 @@ int bsem_alloc(void);
 void bsem_free(int);
 void bsem_down(int);
 void bsem_up(int);
+int kthread_create (void ( *)(), void * );
+int kthread_id();
+void kthread_exit(int );
+int kthread_join (int , int *);
 
 // ulib.c
 int stat(const char*, struct stat*);

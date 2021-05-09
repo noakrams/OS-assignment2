@@ -3,7 +3,7 @@
 #include "kernel/fcntl.h"
 #include "kernel/syscall.h"
 #include "kernel/sigaction.h"
-
+#include "kernel/param.h"
 
 
 
@@ -253,6 +253,37 @@ void bsem_test(){
     printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
 }
 
+void thread_kthread_id(){
+  fprintf(2, "\nstarting kthread_id test\n");
+  int x = kthread_id();
+  fprintf(2, "thread_id is: %d\n", x);
+  fprintf(2, "finished kthread_id test\n");
+}
+
+void thread_kthread_create(){
+  fprintf(2, "\nstarting kthread_create test\n");
+
+  fprintf(2, "curr thread id is: %d\n", kthread_id());
+  void* stack = malloc(MAX_STACK_SIZE);
+  fprintf(2, "the new thread id is: %d\n", kthread_create(thread_kthread_id,stack));
+  free(stack);
+
+  fprintf(2, "finished kthread_create test\n");
+}
+
+void thread_kthread_create_with_wait(){
+  fprintf(2, "\nstarting kthread_create_with_wait test\n");
+
+  fprintf(2, "curr thread id is: %d\n", kthread_id());
+  void* stack = malloc(MAX_STACK_SIZE);
+  fprintf(2, "the new thread id is: %d\n", kthread_create(thread_kthread_id,stack));
+  free(stack);
+  int x= 10;
+  wait(&x);
+
+  fprintf(2, "finished kthread_create_with_wait test\n");
+}
+
 
 //ASS2 TASK2
 int
@@ -266,10 +297,13 @@ main(int argc, char **argv)
 //  test_stop_cont();
 //  test_sig_ign();
 //  test_sigmask();
-  signal_test();
-//    bsem_test();
-  
-  printf("ALL TESTS PASSED\n");
+//  signal_test();
+//  bsem_test();
+//  thread_kthread_id();
+  thread_kthread_create();
+//thread_kthread_create_with_wait();
+
+  printf("\nALL TESTS PASSED\n");
   exit(0);
 }
  

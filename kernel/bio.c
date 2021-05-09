@@ -95,8 +95,11 @@ bread(uint dev, uint blockno)
   struct buf *b;
 
   b = bget(dev, blockno);
+
   if(!b->valid) {
     virtio_disk_rw(b, 0);
+    //printf("debug: finish virtio func\n");
+
     b->valid = 1;
   }
   return b;

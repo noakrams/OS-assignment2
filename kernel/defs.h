@@ -113,6 +113,13 @@ void            bsem_free(int i);
 void            bsem_down(int i);
 void            bsem_up(int i);
 
+// thread.c
+struct thread*  mythread();
+int             kthread_create (void ( *start_func)(), void *stack );
+int             kthread_id();
+void            kthread_exit(int status);
+int             kthread_join (int thread_id, int *status);
+
 // swtch.S
 void            swtch(struct context*, struct context*);
 
