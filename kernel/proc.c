@@ -346,16 +346,18 @@ growproc(int n)
 {
   uint sz;
   struct proc *p = myproc();
-
+  acquire(&p->lock);
   sz = p->sz;
   if(n > 0){
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
+      release(&p->lock);
       return -1;
     }
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  release(&p->lock);
   return 0;
 }
 
@@ -369,7 +371,7 @@ fork(void)
   struct proc *p = myproc();
   struct thread *t = mythread();
 
-  printf("debug: starting fork, tid %d, pid %d\n\n", t->tid, p->pid);
+  //printf("debug: starting fork, tid %d, pid %d\n\n", t->tid, p->pid);
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -434,7 +436,7 @@ reparent(struct proc *p)
   for(pp = proc; pp < &proc[NPROC]; pp++){
     if(pp->parent == p){
       pp->parent = initproc;
-      wakeup(initproc);
+      wakeup(initproc->main_thread);
     }
   }
 }
@@ -448,9 +450,7 @@ Treparent(struct thread *t)
   struct proc *p = t->proc_parent;
 
   for(tt = p->threads; tt < &p->threads[NTHREAD]; tt++){
-    printf("Treparent tid number: %d\n",tt->tid);
     if(tt->thread_parent == t && t!=p->main_thread){
-      printf("found a children\n");
       tt->thread_parent = p->main_thread;
       wakeup(p->main_thread);
     }
@@ -472,6 +472,7 @@ exit(int status)
   if(p == initproc)
     panic("init exiting");
 
+  printf("inside exit for pid %d\n", p->pid);
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
     if(p->ofile[fd]){
@@ -493,17 +494,19 @@ exit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-  
-  acquire(&p->lock);
-
-  p->xstate = status;
-  p->state = ZOMBIE;
 
     // kill all the threads
   struct thread *t;
   for(t=p->threads; t < &p->threads[NTHREAD]; t++){
     t->state = ZOMBIE;
+    printf("tid %d is zombie now\n", t->tid);
+    wakeup(t);
   }
+
+  acquire(&p->lock);
+
+  p->xstate = status;
+  p->state = ZOMBIE;
 
   release(&wait_lock);
   // Jump into the scheduler, never to return.
@@ -520,6 +523,8 @@ wait(uint64 addr)
   struct proc *np;
   int havekids, pid;
   struct proc *p = myproc();
+  struct thread *t = mythread();
+  struct thread *tt;
 
   acquire(&wait_lock);
 
@@ -541,8 +546,12 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+          for(tt = np->threads; tt<&np->threads[NTHREAD]; tt++){
+            if(tt->state != UNUSED)
+              freethread(tt);
+          }
+
           freeproc(np);
-          freethread(np->main_thread);
           release(&np->lock);
           release(&wait_lock);
           return pid;
@@ -557,8 +566,9 @@ wait(uint64 addr)
       return -1;
     }
     
+    //printf("send tid %d to sleep\n", t->tid);
     // Wait for a child to exit.
-    sleep(p, &wait_lock);  //DOC: wait-sleep
+    sleep(t, &wait_lock);  //DOC: wait-sleep
   }
 }
 
@@ -654,7 +664,7 @@ yield(void)
 void
 forkret(void)
 {
-  printf("debug: starting forkret function\npid %d\ntid %d\n\n", myproc()->pid, mythread()->tid);
+  //printf("debug: starting forkret function\npid %d\ntid %d\n\n", myproc()->pid, mythread()->tid);
   static int first = 1;
 
   // Still holding p->lock from scheduler.
@@ -667,7 +677,7 @@ forkret(void)
     first = 0;
     fsinit(ROOTDEV);
   }
-  printf("debug: finishing forkret\n");
+  //printf("debug: finishing forkret\n");
 
   usertrapret();
 
@@ -694,7 +704,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   t->chan = chan;
   t->state = SLEEPING;
-
+  //printf(" tid %d go to sleep\n", t->tid);
   sched();
   //printf("debug: lock:%s finish to sleep\n", lk->name);
 
@@ -717,17 +727,16 @@ wakeup(void *chan)
   struct thread *t;
 
   for(p = proc; p < &proc[NPROC]; p++) {
-    if(p != myproc()){
-      acquire(&p->lock);
-      for (t = p->threads; t < &p->threads[NTHREAD]; t++){
-        if (t != mythread()){
-          if(t->state == SLEEPING && t->chan == chan) {
-            t->state = RUNNABLE;
-          }
+    acquire(&p->lock);
+    for (t = p->threads; t < &p->threads[NTHREAD]; t++){
+      if (t != mythread()){
+        if(t->state == SLEEPING && t->chan == chan) {
+          t->state = RUNNABLE;
         }
       }
-      release(&p->lock);
     }
+    release(&p->lock);
+    
   }
   //printf("debug: finishing wakeup\n");
 
@@ -741,6 +750,7 @@ kill(int pid, int signum)
 {
   //printf("debug: starting kill function\n");
   struct proc *p;
+  struct thread *t;
 
   if(signum >= SIGNALS_SIZE || signum < 0) return -1;
 
@@ -753,6 +763,11 @@ kill(int pid, int signum)
         if(p->state == SLEEPING){ //-----------------> Was in the previous version, according to the forum now it's redundant
           // Wake process from sleep().
           p->state = RUNNABLE;
+        }
+        for(t=p->threads; t<&p->threads[NTHREAD]; t++){
+          if(t->state == SLEEPING){
+            t->state = RUNNABLE;
+          }
         }
       }
       p->pendingSignals |= (1 << signum);

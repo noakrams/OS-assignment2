@@ -53,8 +53,8 @@ usertrap(void)
   if(r_scause() == 8){
     // system call
 
-    if(t->killed)
-      kthread_exit(-1);
+    if(t->proc_parent->killed)
+      exit(-1);
 
     // sepc points to the ecall instruction,
     // but we want to return to the next instruction.
@@ -70,11 +70,11 @@ usertrap(void)
   } else {
     printf("usertrap(): unexpected scause %p tid=%d\n", r_scause(), t->tid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    t->killed = 1;
+    t->proc_parent->killed = 1;
   }
 
-  if(t->killed)
-    kthread_exit(-1);
+  if(t->proc_parent->killed)
+    exit(-1);
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
