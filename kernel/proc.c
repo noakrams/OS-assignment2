@@ -654,7 +654,6 @@ yield(void)
 void
 forkret(void)
 {
-  printf("debug: starting forkret function\npid %d\ntid %d\n\n", myproc()->pid, mythread()->tid);
   static int first = 1;
 
   // Still holding p->lock from scheduler.

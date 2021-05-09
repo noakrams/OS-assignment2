@@ -1,5 +1,4 @@
 #include "kernel/sigaction.h"
-#include "user/Csemaphore.c"
 
 #include "kernel/param.h"
 #include "kernel/types.h"
@@ -10,6 +9,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
+#include "kernel/Csemaphore.h"
 
 
 
