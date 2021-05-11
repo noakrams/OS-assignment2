@@ -76,7 +76,6 @@ void signal_test(char *s){
         printf("Got out of while\n");
         exit(0);
     }
-    printf("Father pid = %d    ,    child pid = %d\n", getpid(), pid);
     kill(pid, testsig);
     printf("signal_test - before wait\n");
     wait(&pid);
@@ -85,14 +84,14 @@ void signal_test(char *s){
 
 void thread_test(char *s){
     int tid;
-    int status;
+    //int status;
     void* stack = malloc(MAX_STACK_SIZE);
     tid = kthread_create(test_thread, stack);
-    kthread_join(tid,&status);
+    //kthread_join(tid,&status);
 
-    tid = kthread_id();
+    //tid = kthread_id();
     free(stack);
-    printf("Finished testing threads, main thread id: %d, %d\n", tid,status);
+    printf("Finished testing threads, main thread id: %d\n", tid);
 }
 
 

@@ -23,18 +23,22 @@ int flag;
 
 void handle(int signum){
     flag = signum;
-    printf("handle -> signum: %d\n", signum);
+    printf("in handle: changed flag\n");
 }
 
 void handle2(int signum){
     flag = signum;
-    printf("handle2 -> signum: %d\n", signum);
+    printf("in handle2: changed flag\n");
 }
 
 void handle3(int signum){
     flag = signum;
-    printf("in handle3, flag = %d\n", flag);
-    printf("handle3 -> signum: %d\n", signum);
+    printf("in handle3: changed flag\n");
+}
+
+void test_thread(){
+    printf("Thread is now running\n");
+    kthread_exit(0);
 }
 
 int wait_sig = 0;
@@ -52,7 +56,7 @@ void sigkillTest(void){
     while(1);
   }
   else{
-    sleep(50);
+    sleep(25);
     kill(cpid, SIGKILL);
   }
   printf("sigkillTest OK\n");
@@ -69,7 +73,7 @@ void killwdiffSignum(void){
     sleep(50);
     kill(cpid, 15);
   }
-  printf("kill with another signum test OK\n");
+  printf("killwdiffSignum OK\n");
 
 }
 
@@ -90,27 +94,24 @@ void testSigactionHandler1(void){
 
   sigaction(5, act, 0);
   sigaction(2, act2, 0);
-  int ret3 = sigaction(7, act3, 0);
-  printf("ret3 = %d\n", ret3);
-   printf("The address of the function handle3 is =%p\n",handle3);
+  sigaction(7, act3, 0);
 
   int cpid = fork();
   if(cpid == 0){
     while(1){
       if(flag == 7){
-        printf("successfully recieved signal\n");
+        printf("testSigactionHandler1 got flag ... ");
       }
     }
   }
   else{
     sleep(100);
-    printf( "sending signal %d\n" , 7);
     kill(cpid, 7);
     sleep(100);
     kill(cpid, SIGKILL);
   }
   wait(0);
-  printf("custom sig test OK\n");
+  printf("testSigactionHandler1 OK\n");
   flag = 0;
 }
 
@@ -125,19 +126,15 @@ void testContStopCont(void){
   }
   else{
     sleep(20);
-    printf("sending cont\n");
     kill(cpid, SIGCONT);
 
     sleep(20);
-    printf("sending stop\n");
     kill(cpid, SIGSTOP);
 
     sleep(20);
-    printf("sending cont\n");
     kill(cpid, SIGCONT);
 
     sleep(20);
-    printf("killing\n");
     kill(cpid, SIGKILL);
   }
   wait(0);
@@ -155,15 +152,12 @@ void testStopCont(void){
   }
   else{
     sleep(20);
-    printf("send stop\n");
     kill(cpid, SIGSTOP);
 
     sleep(20);
-    printf("send cont\n");
     kill(cpid, SIGCONT);
 
     sleep(20);
-    printf("now to the killing\n");
     kill(cpid, SIGKILL);
   }
   wait(0);
@@ -182,13 +176,12 @@ void testSigactionIGN(void){
   if(cpid == 0){
     while(1){
       if(flag == 5){
-        printf( "If you see me, that's not good\n");
+        printf( "testSigactionIGN - If you see me, that's not good\n");
       }
     }
   }
   else{
     sleep(10);
-    printf( "send sigaction eith SIG_IGN\n");
     kill(cpid, 5);
     sleep(10);
     kill(cpid, SIGKILL);
@@ -199,7 +192,7 @@ void testSigactionIGN(void){
 }
 
 
-void testSigmAsk(void){
+void testSigMask(void){
   uint mask = 1 << 3;
   sigprocmask(mask);
 
@@ -223,19 +216,18 @@ void testSigmAsk(void){
   if(cpid == 0){
     while(1){
       if(flag == 7){
-        printf("Recieved flag\n");
+        printf("testSigMask -> recieved flag...     ");
         break;
       }
     }
   }
   else{
     sleep(10);
-    printf("sending sigaction with handler\n");
     kill(cpid, 7);
     sleep(10);
   }
   wait(0);
-  printf( "sig mask test OK\n");
+  printf( "testSigMask OK\n");
   flag = 0;
 }
 
@@ -258,113 +250,19 @@ void signal_test(){
     printf("Finished testing signals\n");
 }
 
-void bsem_test(){
-    int pid;
-    int bid = bsem_alloc();
-    bsem_down(bid);
-    printf("1. Parent downing semaphore, pid number = %d\n" , getpid());
-    if((pid = fork()) == 0){
-        printf("2. Child downing semaphore, pid number = %d\n" , getpid());
-        bsem_down(bid);
-        printf("4. Child woke up\n");
-        exit(0);
-    }
-    sleep(5);
-    printf("3. Let the child wait on the semaphore...\n");
-    sleep(10);
-    bsem_up(bid);
 
-    bsem_free(bid);
-    wait(&pid);
-
-    printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
-}
-
-void thread_kthread_id(){
-  fprintf(2, "\nstarting kthread_id test\n");
-  int x = kthread_id();
-  fprintf(2, "thread_id is: %d\n", x);
-  fprintf(2, "finished kthread_id test\n");
-}
-
-void thread_kthread_create(){
-  fprintf(2, "\nstarting kthread_create test\n");
-
-  fprintf(2, "curr thread id is: %d\n", kthread_id());
-  void* stack = malloc(MAX_STACK_SIZE);
-  fprintf(2, "the new thread id is: %d\n", kthread_create(thread_kthread_id,stack));
-  free(stack);
-
-  fprintf(2, "finished kthread_create test\n");
-}
-
-void thread_kthread_create_with_wait(){
-  fprintf(2, "\nstarting kthread_create_with_wait test\n");
-
-  fprintf(2, "curr thread id is: %d\n", kthread_id());
-  void* stack = malloc(MAX_STACK_SIZE);
-  fprintf(2, "the new thread id is: %d\n", kthread_create(thread_kthread_id,stack));
-  free(stack);
-  int x= 10;
-  wait(&x);
-
-  fprintf(2, "finished kthread_create_with_wait test\n");
-}
-
-
-
-void Csem_test(){
-	struct counting_semaphore csem;
-    int retval;
-    int pid;
-    
-    
-    retval = csem_alloc(&csem,1);
-    if(retval==-1)
-    {
-		printf("failed csem alloc");
-		exit(-1);
-	}
-    csem_down(&csem);
-    printf("1. Parent downing semaphore\n");
-    if((pid = fork()) == 0){
-        printf("2. Child downing semaphore\n");
-        csem_down(&csem);
-        printf("4. Child woke up\n");
-        exit(0);
-    }
-    sleep(5);
-    printf("3. Let the child wait on the semaphore...\n");
-    sleep(10);
-    csem_up(&csem);
-
-    csem_free(&csem);
-    wait(&pid);
-
-    printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
-}
-
-
-
-//ASS2 TASK2
 int
 main(int argc, char **argv)
 {
-  printf( "starting testing signals and friends\n");
-  
-//  sigkillTest();
-//  killwdiffSignum();
-//  testSigactionHandler1();
-//  testContStopCont();
-//  testStopCont();
-//  testSigactionIGN();
-//  testSigmAsk();
+  printf("start of tests 2.5\n");
+  sigkillTest();
+  killwdiffSignum();
+  testSigactionHandler1();
+  testContStopCont();
+  testStopCont();
+  testSigactionIGN();
+  testSigMask();
   signal_test();
-  // bsem_test();
-  // Csem_test();
-//  thread_kthread_id();
-  thread_kthread_create();
-//thread_kthread_create_with_wait();
 
   printf("\nALL TESTS PASSED\n");
   exit(0);

@@ -234,9 +234,11 @@ freeproc(struct proc *p)
 static void
 freethread(struct thread *t)
 {
+  // && t!=t->proc_parent->threads
   if(t->kstack && t!=t->proc_parent->threads)
     kfree((void*)t->kstack);
-  t->trapframe = 0;
+  if(t!=t->proc_parent->threads)
+    t->trapframe = 0;
   t->tid = 0;
   t->thread_parent = 0;
   t->proc_parent = 0;
@@ -898,7 +900,6 @@ void
 sigret (void){
   struct proc* p = myproc();
   struct thread* t = mythread();
-  printf("sig ret\n");
   *t->trapframe = t->UserTrapFrameBackup;
   // memmove(p->trapframe, p->UserTrapFrameBackup, sizeof(struct trapframe));
   // if(copyin(p->pagetable,(char*)p->trapframe, (uint64)p->UserTrapFrameBackup, sizeof(struct trapframe)) < 0)
@@ -990,8 +991,6 @@ void handling_signals(){
       /* If default -> default actions for SIGSTOP, SIGCONT and SIGKILL
          For all other signals the default should be the SIGKILL behavior */
       if(p->signalHandlers[sig] == (void*)SIG_DFL){
-        if(p->pid == 6) 
-          printf("pid 6 = child , in handle SIG_DFL\n");
         switch(sig)
         {
           case SIGSTOP:
@@ -1101,8 +1100,11 @@ allocthread(void ( *start_func)(), void *stack)
   }
 
     // Allocate a trapframe page.
+    //(int)(t-p->threads)
   t->trapframe = p->threads->trapframe + (sizeof(struct trapframe) * (int)(t-p->threads));
+  printf("(int)(t-p->threads) = %d\n" , (int)(t-p->threads));
   memmove ((void *) t->trapframe, (void*) curr_thread->trapframe, sizeof(struct trapframe));
+   // memmove (t->trapframe, curr_thread->trapframe, sizeof(struct trapframe));
   
   // Set up new context to start executing at forkret,
   // which returns to user space.
